@@ -259,17 +259,17 @@ summary(mi.regresion)
 # Por ahora, vamos a enfocarnos en archiovos CSV y texto plano
 
 ### Archivo de texto
-datos.desde.texto <- read.table("PIB.txt",header=TRUE)
+datos.desde.texto <- read.table(".input/PIB.txt",header=TRUE)
 datos.desde.texto
 x11(); plot(datos.desde.texto)
 
 # Podemos llamar archivos que no esten en el directorio usando la ruta completa
-datos.desde.texto <- read.table("C:/Users/agutieda/Desktop/PIB.txt",header=TRUE)
-datos.desde.texto
-x11(); plot(datos.desde.texto)
+# datos.desde.texto <- read.table("C:/Users/USUARIO/CARPETA/PIB.txt",header=TRUE)
+# datos.desde.texto
+# x11(); plot(datos.desde.texto)
 
 ### Archivo CSV (Comma-Separated Values)
-datos.desde.csv <- read.csv("PIB.csv")
+datos.desde.csv <- read.csv("./PIB.csv")
 datos.desde.csv
 x11(); plot(datos.desde.csv)
 
