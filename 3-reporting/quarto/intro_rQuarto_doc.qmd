@@ -1,0 +1,104 @@
+---
+title: "intro_rQuarto"
+format: html
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+# R Quarto
+
+R Markdown es un formato que permite crear documentos interactivos que pueden ser exportados a HTML, PDF, MS Word, presentaciones y mucho mas.
+
+Los reportes en R Markdown pueden incluir texto, imagenes, ecuaciones y codigo de R. Esto permite crear reportes dinamicos que podemos compartir con otras personas, permitiendo a otros replicar analisis realizados por nosotros mismos.
+
+Es importante no subestimar la importancia de este punto: Muchas diciplinas se han visto afectadas por crisis de "reproducibilidad". Es importante entonces que nuestros analisis sean faciles de entender y replicar por otros investigadores.
+
+Un archivo de R Markdown permite presentar un codigo de R junto con su "output" (tablas, figuras, etc) junto con texto convencional y (si tienen Latex instalado) ecuaciones. Por lo tanto, se puede utilizar como un apendice de algún\
+proyecto de investigacion o trabajo que esten escribiendo. Tambien pueden usarlo para escribir notas de clase y recordatorios para ustedes mismos.
+
+Este documento ilustra algunas de las instrucciones básicas que se pueden usar en R Markdown para formatear texto e incluir código de R para escribir documentos interactivos. Para mas información, recomiendo consultar <http://RMarkdown.rstudio.com>
+
+# Insertar codigo de R
+
+En un documento de R Markdown podemos insertar pedazos de codigo de R o "chunks" de la siguiente forma:
+
+```{r cars}
+summary(cars)
+```
+
+Podemos usar CTRL+ALT+I como un atajo para crear estos chunks. Podemos ejecutar una línea de código en el "chunk" con CTRL+ENTER y todo el "chunk" CTRL+SHIFT+ENTER, igual que en script de R.
+
+De forma alternativa, podemos hacer clic en la flecha verde en la parte derecha del "chunk".
+
+Tambien podemos incluir codigo dentro de una linea. Por ejemplo, `r paste("Hello", "World!")`.
+
+# Incluir Figuras
+
+Tambien podemos incluir figuras en el documento sin inonvenientes.
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+El argumento `echo = FALSE` que incluimos en el chunk evita que R imprima el codigo antes de generar la figura.
+
+# Ejecutar y Exportar
+
+Una vez tenemos listo nuestro documento de R Markdown, podemos ejecutar todos los chunks en nuestro documento usando CTRL+ALT+R.
+
+El formato Markdown nos permite exportar este análisis como un documento de Word, PDF y HTML, entre otros. Para obtener una vista preliminar del documento, podemos usar las teclas CTRL+SHIFT+K. Si deseamos exportar el documento a un formato específico, podemos usar el icono "Knit" en la barra superior.
+
+# Listas
+
+Podemos controlar la apariencia y formato del documento exportado utilizando diferentes instrucciones propias del formato Markdown.
+
+Hemos visto como usar texto plano de forma sencilla.
+
+Podemos añadir listas desorganizadas usando tabs junto con \*, +, -:
+
+-   Primer item de la lista
+    -   Subitem 1 de la lista
+-   Segundo item de la lista
+    -   Subitem 2 de la lista
+        -   Sub-Sub item
+
+Y listas numeradas:
+
+1)  Numero 1
+2)  Numero 2
+
+# Formato de texto
+
+También podemos formatear el aspecto del texto:
+
+-   *Cursiva* y *Cursiva*
+-   **Negrilla** y **Negrilla**
+-   ~~tachar~~
+-   `verbatim, util para lineas de codigo`
+
+Tambien podemos incluir links a un sitio como [RStudio](www.rstudio.com)
+
+# Secciones
+
+Como lo hemos hecho anteriormente, podemos usar \# para crear secciones y subsecciones
+
+## Una subsección
+
+Y subsecciones
+
+### Una sub-subseccion
+
+Sub-subsecciones
+
+#### Otra mas
+
+Y asi
+
+# Ecuaciones
+
+Finalmente, podemos incluir ecuaciones dentro de una linea usando la sintaxis de Latex: $\hat{\beta} = \left( X'X \right )^{-1} X'Y$. De forma alternativa, podemos incluirlas en bloques separados:
+
+$$\hat{\beta} = \left( X'X \right )^{-1} X'Y$$
