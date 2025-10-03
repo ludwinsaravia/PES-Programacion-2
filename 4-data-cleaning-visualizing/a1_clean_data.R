@@ -33,6 +33,12 @@ cat("\014")
 # 1) Carga de datos
 # ------------------------------------------------------------------------------
 
+# Para este script, es necesario tener en la subcarpeta "./input" lo datos del
+# IPC por grupo de gasto para diferentes años y llamar los archivos como 
+# "IPC_yyyy", donde yyyy corresponde al año del archivo. Estos datos se pueden
+# descargar en: https://www.ine.gob.gt/indice-de-precios-al-consumidor/
+
+
 # Para comenzar, debemos cargar datos desde un archivo de Excel
 # Para hacerlo, utilizaremos la funcion read_excel() del paquete readxl
 # Ver: https://readxl.tidyverse.org/
@@ -50,8 +56,24 @@ IPC_2023 <- read_excel("input/IPC_2023.xls")
 variables_2023 <- names(IPC_2023)
 variables_2023
 
+# Nombre asignados a cada columna
+def_names <- c( "t_year"      , # Año
+                "t_month"     , # Mes
+                "id_item"     , # Código
+                "descr"       , # Descripción
+                "ipc"         , # Rep.
+                "ipc_r_1"     , # Reg. I
+                "ipc_r_2"     , # Reg. II
+                "ipc_r_3"     , # Reg. III
+                "ipc_r_4"     , # Reg. IV
+                "ipc_r_5"     , # Reg. V
+                "ipc_r_6"     , # Reg. VI
+                "ipc_r_7"     , # Reg. VII
+                "ipc_r_8"       # Reg. VIII
+)
+
 # Tipo de variable en cada columna
-col_tipo <- c(  "numeric" , # Año
+def_type <- c(  "numeric" , # Año
                 "text"    , # Mes
                 "text"    , # Código
                 "text"    , # Descripción
@@ -70,11 +92,14 @@ col_tipo <- c(  "numeric" , # Año
 # a una variable cuyo nombre se construye dinámicamente
 # Ver: https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/assign
 
+start_year <- 2013
+end_year   <- 2025
+
 # Cargar las bases en un ciclo for
-for (iBase in 2018:2025) {
+for (iBase in start_year:end_year) {
     base_i <- paste0("IPC_", iBase)
     path_i <- paste0("input/", base_i, ".xls")
-    assign(base_i, read_excel(path_i, col_types = col_tipo))
+    assign(base_i, read_excel(path_i, col_types = def_type, col_names = def_names ))
 }
 
 # ------------------------------------------------------------------------------
@@ -92,12 +117,15 @@ for (iBase in 2018:2025) {
 # ipc_data <- bind_rows(IPC_2018, IPC_2019, IPC_2020, IPC_2021)
 
 # O, de forma programática:
-data_list <- lapply(2018:2025, function(i) get(paste0("IPC_", i)))
+data_list <- lapply(start_year:end_year, function(i) get(paste0("IPC_", i)))
 ipc_data  <- bind_rows(data_list)
+
+# Eliminemos las observaciones con t_year NA
+ipc_data %<>% filter( !is.na(t_year) )
 
 # Ahora que tenemos los datos en un solo data frame, podemos eliminar las
 # variables individuales para liberar memoria
-rm(list = paste0("IPC_", 2018:2025))
+rm(list = paste0("IPC_", start_year:end_year))
 gc() # Limpiar memoria
 
 # ------------------------------------------------------------------------------
@@ -109,10 +137,10 @@ gc() # Limpiar memoria
 # nombres de los meses a formato título utilizando la función str_to_title()
 # del paquete stringr
 # Ver: https://stringr.tidyverse.org/reference/str_to_title.html
-ipc_data %<>% mutate(Mes = str_to_title(Mes)) 
+ipc_data %<>% mutate(t_month = str_to_title(t_month)) 
 
 # Hagamos lo mismo con las descripciones
-ipc_data %<>% mutate(Descripción = str_to_title(Descripción))
+ipc_data %<>% mutate(descr = str_to_title(descr))
 
 # En el caso del código, hay ocasiones donde aparece con un 0 al inicio, y 
 # otras veces no. Para estandarizar, podemos agregar un 0 al inicio de los
@@ -121,14 +149,14 @@ ipc_data %<>% mutate(Descripción = str_to_title(Descripción))
 # Ver: https://stringr.tidyverse.org/reference/str_pad.html
 
 # Creemos una variable que cuente el número de dígitos en el código
-ipc_data %<>% mutate(n_digitos = str_length(Código))
+ipc_data %<>% mutate(n_digitos = str_length(id_item))
 
 # Ahora creemos un id de codigo con un cero a la izquierda de los códigos 
 # con menos de 2 dígitos
 ipc_data %<>% mutate(
-    id_codigo = if_else(str_length(Código) < 2 & !(Código == 0),
-                        str_pad(Código, width = 2, side = "left", pad = "0"),
-                        Código)
+    id_codigo = if_else(str_length(id_item) < 2 & !(id_item == 0),
+                        str_pad(id_item, width = 2, side = "left", pad = "0"),
+                        id_item)
 )
 
 # ------------------------------------------------------------------------------
@@ -137,11 +165,11 @@ ipc_data %<>% mutate(
 
 # a) Identificador de fecha ----------------------------------------------------
 
-# La variable Mes es de tipo texto, por lo que debemos convertirla a un formato
-# que R pueda entender como fecha. Para hacerlo, comenzamos por reemplazar los
-# nombres de los meses en español por sus equivalentes en inglés, ya que
-# lubridate funciona mejor con nombres de meses en inglés
-
+# # La variable t_month es de tipo texto, por lo que debemos convertirla a un formato
+# # que R pueda entender como fecha. Para hacerlo, comenzamos por reemplazar los
+# # nombres de los meses en español por sus equivalentes en inglés, ya que
+# # lubridate funciona mejor con nombres de meses en inglés
+# 
 lista_de_reemplazos <- c(
     "Enero"      = "January"   ,
     "Febrero"    = "February"  ,
@@ -157,8 +185,12 @@ lista_de_reemplazos <- c(
     "Diciembre"  = "December"
 )
 
-ipc_data <- ipc_data %>% 
-    mutate(Mes = str_replace_all(Mes, lista_de_reemplazos))
+ipc_data <- ipc_data %>%
+    mutate(t_month = str_replace_all(t_month, lista_de_reemplazos))
+
+# También pdríamos hacer esto usando la funcion dplyr::recode()
+# Ver: https://dplyr.tidyverse.org/reference/recode.html
+
 
 # Ahora convertimos el mes y el año en formato fecha utilizando la función
 # parse_date() del paquete lubridate
@@ -171,7 +203,7 @@ ipc_data <- ipc_data %>%
 
 # Creamos la variable t_date que contiene la fecha en formato Date
 ipc_data <- ipc_data %>%
-    mutate(t_fecha = parse_date(paste0("01-", Mes, "-", Año), format = "%d-%B-%Y")) 
+    mutate(t_date = parse_date(paste0("01-", t_month, "-", t_year), format = "%d-%B-%Y")) 
 
 
 # b) Crear variable identificando nivel de desagregación -----------------------
@@ -192,7 +224,7 @@ print(flag1, n = 5)
 # No incluyeron un "0" para el IPC general en 2025 ....
 # Agreguémoslo manualmente
 ipc_data %<>%
-    mutate(id_codigo = if_else(is.na(id_codigo) & Año == 2025, "0", id_codigo))
+    mutate(id_codigo = if_else(is.na(id_codigo) & t_year == 2025, "0", id_codigo))
 
 # La inspección de los datos nos muestra que el "0" corresponde al IPC general,
 # los códigos con uno y dos dígitos corresponden a grupos de consumo, y
@@ -221,8 +253,8 @@ ipc_data %<>%
 # Agreguemos también el título de la categoría padre
 # Primero, creemos una tabla con los códigos y descripciones de los grupos
 grupo_list <- ipc_data %>%
-    filter( id_nivel == "Grupo" , year(t_fecha)==2023) %>%
-    select(id_grupo = id_codigo, descr_grupo = Descripción) %>%
+    filter( id_nivel == "Grupo" , year(t_date)==2023) %>%
+    select(id_grupo = id_codigo, descr_grupo = descr) %>%
     distinct()
 
 # Ahora unamos esta tabla con la tabla original
@@ -231,7 +263,7 @@ ipc_data %<>% left_join(grupo_list, by = "id_grupo")
 # Ahora veamos cuantos items hay en cada categoría padre
 cat_list <- ipc_data %>%
     filter( id_nivel %in% c("Grupo", "Item") ) %>%
-    group_by(id_grupo, year(t_fecha)) %>%
+    group_by(id_grupo, year(t_date)) %>%
     summarise(n_items = n_distinct(id_codigo), first(descr_grupo)) %>%
     arrange(id_grupo)
 
