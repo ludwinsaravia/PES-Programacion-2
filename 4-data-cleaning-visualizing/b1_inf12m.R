@@ -94,4 +94,3 @@ inf12m_tab %<>%
         inf12m_q1 = quantile(c_across(-t_date), probs = 0.25, na.rm = TRUE),
         inf12m_q3 = quantile(c_across(-t_date), probs = 0.75, na.rm = TRUE)
     )
-
