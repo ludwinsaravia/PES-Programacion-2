@@ -1,0 +1,276 @@
+---
+title: "Figuras en R"
+subtitle: "Series de Tiempo"
+author: "Ángelo Gutiérrez Daza"
+date: "2025-10-03"
+format: 
+  revealjs:
+    theme: simple
+    smaller: true
+    scrollable: true
+    slide-number: true
+    chalkboard: true
+    preview-links: auto
+    logo: "./input/Logo-Banco-de-Guatemala.png"
+    footer: "Programación II - Banco de Guatemala"
+---
+
+## Inicialización y Librerías
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r libraries}
+# Librerías usadas
+library(dplyr)
+library(readr)
+library(lubridate)
+library(ggplot2)
+library(tidyr)
+library(stringr)
+library(readxl)
+library(magrittr)
+
+# Limpiar entorno de trabajo
+graphics.off()
+rm(list = ls())
+cat("\014")
+```
+
+---
+
+## Carga de Datos
+
+```{r load-data}
+# Comenzemos por cargar el CSV con la muestra seleccionada
+ipc_data <- read_csv("./output/selected_data.csv")
+
+# Mostrar primeras filas
+head(ipc_data)
+```
+
+---
+
+## Construcción de Índices de Inflación Anual
+
+```{r inflation-calculation}
+# Para cada item y fecha, vamos a calcular la inflación anual
+ipc_data %<>%
+    group_by(id_item) %>%
+    arrange(t_date) %>%
+    mutate(
+        ipc_lag12 = lag(ipc, n = 12, order_by = t_date),
+        inf12m = (ipc / ipc_lag12 - 1) * 100
+        ) %>%
+    ungroup()
+
+# Eliminar valores NA de los primeros 12 meses
+ipc_data %<>% filter(!is.na(inf12m))
+
+# Mostrar resultado
+head(ipc_data %>% select(t_date, id_item, descr, ipc, inf12m))
+```
+
+---
+
+## Tabla de Inflaciones por Item
+
+```{r pivot-table}
+# Construir tabla pivotada: fechas en filas, items en columnas
+inf12m_tab <- ipc_data %>%
+    select(t_date, id_item, inf12m) %>%
+    pivot_wider(names_from = id_item, values_from = inf12m)
+
+# Crear lista de grupos para referencia
+grupo_list <- ipc_data %>%
+    filter(year(t_date) == 2023) %>%
+    select(id_grupo = id_item, descr_grupo = descr) %>%
+    distinct()
+
+# Mostrar dimensiones de la tabla
+cat("Dimensiones de la tabla:", dim(inf12m_tab))
+```
+
+---
+
+## Cálculo de Estadísticas Resumidas
+
+```{r summary-stats}
+# Calcular inflación mediana, Q1 y Q3
+inf12m_tab %<>%
+    rowwise() %>%
+    mutate(
+        inf12m_med = median(c_across(-t_date), na.rm = TRUE),
+        inf12m_q1 = quantile(c_across(-t_date), probs = 0.25, na.rm = TRUE),
+        inf12m_q3 = quantile(c_across(-t_date), probs = 0.75, na.rm = TRUE)
+    )
+
+# Mostrar estadísticas resumidas
+head(inf12m_tab %>% select(t_date, inf12m_med, inf12m_q1, inf12m_q3))
+```
+
+---
+
+## Preparación de Datos para Graficación
+
+```{r plot-data-prep}
+# Seleccionar datos para graficar (2013-2023)
+inf12m_plot <- inf12m_tab %>%
+    select(t_date, inf12m = `0`, inf12m_med, inf12m_q1, inf12m_q3) %>%
+    filter(year(t_date) >= 2013, year(t_date) <= 2023)
+
+# Mostrar rango de datos
+cat("Período de análisis:", min(inf12m_plot$t_date), "a", max(inf12m_plot$t_date))
+cat("\nNúmero de observaciones:", nrow(inf12m_plot))
+```
+
+---
+
+## Gráfico Simple: Código
+
+```{r simple-plot-code, eval=FALSE}
+# Gráfico básico de la evolución de la inflación anual del IPC general
+plot_simple <- inf12m_plot %>%
+    ggplot() +
+    geom_line(aes(x = t_date, y = inf12m), 
+              linewidth = 1.5, linetype = "solid")
+
+plot_simple
+```
+
+---
+
+## Gráfico Simple: Resultado
+
+```{r simple-plot-output, echo=FALSE}
+# Gráfico básico de la evolución de la inflación anual del IPC general
+plot_simple <- inf12m_plot %>%
+    ggplot() +
+    geom_line(aes(x = t_date, y = inf12m), 
+              linewidth = 1.5, linetype = "solid")
+
+plot_simple
+```
+
+---
+
+## Gráfico Normal: Código
+
+```{r normal-plot-code, eval=FALSE}
+# Gráfico con IPC general y mediana
+plot_normal <- inf12m_plot %>%
+    ggplot() +
+    geom_line(aes(x = t_date, y = inf12m), 
+              color = "red", linewidth = 1.5, linetype = "solid") +
+    geom_line(aes(x = t_date, y = inf12m_med), 
+              color = "darkblue", linewidth = 1.2, linetype = "dashed")
+
+plot_normal
+```
+
+---
+
+## Gráfico Normal: Resultado
+
+```{r normal-plot-output, echo=FALSE}
+# Gráfico con IPC general y mediana
+plot_normal <- inf12m_plot %>%
+    ggplot() +
+    geom_line(aes(x = t_date, y = inf12m), 
+              color = "red", linewidth = 1.5, linetype = "solid") +
+    geom_line(aes(x = t_date, y = inf12m_med), 
+              color = "darkblue", linewidth = 1.2, linetype = "dashed")
+
+plot_normal
+```
+
+---
+
+## Gráfico Elaborado: Código
+
+```{r fancy-plot-code, eval=FALSE}
+plot_fancy <- inf12m_plot %>%
+    ggplot() +
+    geom_ribbon(aes(x = t_date, ymin = inf12m_q1, ymax = inf12m_q3),
+                fill = "#5B92AB", alpha = 0.5) +
+    geom_line(aes(x = t_date, y = inf12m_med),
+              color = "#0C2746", linewidth = 1.5, linetype = "solid") +
+    geom_line(aes(x = t_date, y = inf12m),
+              color = "#8B0000", linewidth = 1.5, linetype = "solid") +
+    labs(title = "Evolución de la inflación anual del IPC general vs la mediana de los items",
+         subtitle = "Con banda intercuartílica (IQR) de los items",
+         x = "Fecha", y = "Inflación Anual (%)",
+         caption = "Fuente: Ángelo, con Datos del INE") +
+    scale_x_date(date_labels = "%Y", date_breaks = "1 year") +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 16, face = "bold"),
+          plot.subtitle = element_text(size = 12),
+          axis.title.x = element_text(size = 12),
+          axis.title.y = element_text(size = 12),
+          axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top") +
+    ylim(-1, 11) +
+    geom_hline(yintercept = 0, linetype = "dotted", color = "black", size = 0.8)
+```
+
+---
+
+## Gráfico Elaborado: Resultado
+
+```{r fancy-plot-output, echo=FALSE}
+plot_fancy <- inf12m_plot %>%
+    ggplot() +
+    geom_ribbon(aes(x = t_date, ymin = inf12m_q1, ymax = inf12m_q3),
+                fill = "#5B92AB", alpha = 0.5) +
+    geom_line(aes(x = t_date, y = inf12m_med),
+              color = "#0C2746", linewidth = 1.5, linetype = "solid") +
+    geom_line(aes(x = t_date, y = inf12m),
+              color = "#8B0000", linewidth = 1.5, linetype = "solid") +
+    labs(title = "Evolución de la inflación anual del IPC general vs la mediana de los items",
+         subtitle = "Con banda intercuartílica (IQR) de los items",
+         x = "Fecha", y = "Inflación Anual (%)",
+         caption = "Fuente: Ángelo, con Datos del INE") +
+    scale_x_date(date_labels = "%Y", date_breaks = "1 year") +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 16, face = "bold"),
+          plot.subtitle = element_text(size = 12),
+          axis.title.x = element_text(size = 12),
+          axis.title.y = element_text(size = 12),
+          axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "top") +
+    ylim(-1, 11) +
+    geom_hline(yintercept = 0, linetype = "dotted", color = "black", size = 0.8)
+
+plot_fancy
+```
+
+---
+
+## Guardar Gráficos
+
+```{r save-plots}
+# Guardar todos los gráficos generados
+ggsave(file = "./output/time_series_simple.pdf", plot = plot_simple)
+ggsave(file = "./output/time_series_normal.pdf", plot = plot_normal)
+ggsave(file = "./output/time_series_fancy.pdf", plot = plot_fancy)
+
+cat("Gráficos guardados exitosamente en la carpeta ./output/")
+```
+
+---
+
+## Notas Metodológicas
+
+Las medidas calculadas aproximan la propuesta de "inflación mediana" de la Reserva Federal de Cleveland:
+
+- **Inflación Mediana**: Medida central de la distribución de inflaciones por item
+
+- **Diferencia metodológica**: Aquí calculamos una mediana simple (sin ponderar), mientras que Cleveland usa mediana ponderada por peso en el IPC
+
+**Referencias:**
+
+- [Cleveland Fed Median PCE Inflation](https://www.clevelandfed.org/indicators-and-data/median-pce-inflation)
+
+- [NBER Working Paper 31032](https://www.nber.org/system/files/working_papers/w31032/w31032.pdf)
+

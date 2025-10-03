@@ -1,0 +1,239 @@
+---
+title: "Figuras en R"
+subtitle: "Gráficos de Dispersión"
+author: "Ángelo Gutiérrez Daza"
+date: "2025-10-03"
+format: 
+  revealjs:
+    theme: moon
+    smaller: true
+    scrollable: true
+    slide-number: true
+    chalkboard: true
+    preview-links: auto
+    logo: "./input/Logo-Banco-de-Guatemala.png"
+    footer: "Programación II - Banco de Guatemala"
+---
+
+## Inicialización y Librerías
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r libraries}
+# Librerías usadas
+library(dplyr)
+library(readr)
+library(lubridate)
+library(ggplot2)
+library(tidyr)
+library(stringr)
+library(readxl)
+library(magrittr)
+
+# Limpiar entorno de trabajo
+graphics.off()
+rm(list = ls())
+cat("\014")
+```
+
+---
+
+## Carga de Datos
+
+```{r load-data}
+# Comenzemos por cargar el CSV con la muestra seleccionada
+ipc_data <- read_csv("./output/selected_data.csv")
+
+# Mostrar primeras filas
+head(ipc_data)
+```
+
+---
+
+## Construcción de Índices de Inflación Anual
+
+```{r inflation-calculation}
+# Para cada item y fecha, vamos a calcular la inflación anual
+ipc_data %<>%
+    group_by(id_item) %>%
+    arrange(t_date) %>%
+    mutate(
+        ipc_lag12 = lag(ipc, n = 12, order_by = t_date),
+        inf12m = (ipc / ipc_lag12 - 1) * 100
+    ) %>%
+    ungroup()
+
+# Eliminar valores NA de los primeros 12 meses
+ipc_data %<>% filter(!is.na(inf12m))
+
+# Mostrar resultado
+head(ipc_data %>% select(t_date, id_item, descr, ipc, inf12m))
+```
+
+---
+
+## Preparación de Datos para Scatter Plot
+
+```{r scatter-data-prep}
+# Enfoquémonos en la inflación de los items en diciembre de cada año
+inf12m_plot <- ipc_data %>%
+    filter(id_nivel == "Item", month(t_date) == 12) %>%
+    mutate(t_year = year(t_date)) %>%
+    select(t_year, id_item, inf12m)
+
+# Seleccionamos dos años y llevamos la tabla a formato ancho
+inf12m_plot <- inf12m_plot %>%
+    filter(t_year %in% c(2014, 2015)) %>%
+    pivot_wider(names_from = t_year, values_from = inf12m, names_prefix = "inf12m_")
+
+# Mostrar estructura de datos
+head(inf12m_plot)
+cat("\nNúmero de items comparables:", nrow(inf12m_plot))
+```
+
+---
+
+## Scatter Plot Simple: Código
+
+```{r simple-scatter-code, eval=FALSE}
+# Gráfico básico de dispersión: 2014 vs 2015
+plot_simple <- inf12m_plot %>%
+    ggplot() +
+    geom_point(aes(x = inf12m_2014, y = inf12m_2015), 
+               color = "blue", size = 3)
+
+plot_simple
+```
+
+---
+
+## Scatter Plot Simple: Resultado
+
+```{r simple-scatter-output, echo=FALSE}
+# Gráfico básico de dispersión: 2014 vs 2015
+plot_simple <- inf12m_plot %>%
+    ggplot() +
+    geom_point(aes(x = inf12m_2014, y = inf12m_2015), 
+               color = "blue", size = 3)
+
+plot_simple
+```
+
+---
+
+## Scatter Mejorado: Código
+
+```{r normal-scatter-code, eval=FALSE}
+# Gráfico mejorado con línea de 45 grados
+plot_normal <- inf12m_plot %>%
+    ggplot() +
+    geom_point(aes(x = inf12m_2014, y = inf12m_2015),
+               color = "darkblue", size = 3, stroke = 1, shape = 21,
+               fill = "cadetblue", alpha = 0.8) +
+    labs(title = "Inflación anual del por item: 2014 vs 2015",
+         x = "Inflación Anual por Item 2014 (%)",
+         y = "Inflación Anual por Item 2015 (%)",
+         caption = "Fuente: Ángelo, con Datos del INE") +
+    xlim(-50, 105) + ylim(-50, 105) +
+    geom_abline(slope = 1, intercept = 0, linetype = "dashed", 
+                color = "red", size = 1) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+          axis.title.x = element_text(size = 14),
+          axis.title.y = element_text(size = 14),
+          axis.text = element_text(size = 12))
+```
+
+---
+
+## Scatter Mejorado: Resultado
+
+```{r normal-scatter-output, echo=FALSE}
+# Gráfico mejorado con línea de 45 grados
+plot_normal <- inf12m_plot %>%
+    ggplot() +
+    geom_point(aes(x = inf12m_2014, y = inf12m_2015),
+               color = "darkblue", size = 3, stroke = 1, shape = 21,
+               fill = "cadetblue", alpha = 0.8) +
+    labs(title = "Inflación anual del por item: 2014 vs 2015",
+         x = "Inflación Anual por Item 2014 (%)",
+         y = "Inflación Anual por Item 2015 (%)",
+         caption = "Fuente: Ángelo, con Datos del INE") +
+    xlim(-50, 105) + ylim(-50, 105) +
+    geom_abline(slope = 1, intercept = 0, linetype = "dashed", 
+                color = "red", size = 1) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+          axis.title.x = element_text(size = 14),
+          axis.title.y = element_text(size = 14),
+          axis.text = element_text(size = 12))
+
+plot_normal
+```
+
+---
+
+## Scatter con Suavizado: Código
+
+```{r fancy-scatter-code, eval=FALSE}
+# Gráfico con línea de tendencia suavizada (LOESS)
+plot_fancy <- inf12m_plot %>%
+    ggplot(aes(x = inf12m_2014, y = inf12m_2015)) +
+    geom_point(color = "darkblue", size = 3, stroke = 1, shape = 21,
+               fill = "cadetblue", alpha = 0.8) +
+    labs(title = "Inflación anual del por item: 2014 vs 2015",
+         x = "Inflación Anual por Item 2014 (%)",
+         y = "Inflación Anual por Item 2015 (%)",
+         caption = "Fuente: Ángelo, con Datos del INE") +
+    xlim(-2.5, 5) + ylim(-2.5, 5) +
+    geom_smooth(method = loess, color = "darkorange", 
+                fill = "lightsalmon", se = TRUE) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+          axis.title.x = element_text(size = 14),
+          axis.title.y = element_text(size = 14),
+          axis.text = element_text(size = 12))
+```
+
+---
+
+## Scatter con Suavizado: Resultado
+
+```{r fancy-scatter-output, echo=FALSE}
+# Gráfico con línea de tendencia suavizada (LOESS)
+plot_fancy <- inf12m_plot %>%
+    ggplot(aes(x = inf12m_2014, y = inf12m_2015)) +
+    geom_point(color = "darkblue", size = 3, stroke = 1, shape = 21,
+               fill = "cadetblue", alpha = 0.8) +
+    labs(title = "Inflación anual del por item: 2014 vs 2015",
+         x = "Inflación Anual por Item 2014 (%)",
+         y = "Inflación Anual por Item 2015 (%)",
+         caption = "Fuente: Ángelo, con Datos del INE") +
+    xlim(-2.5, 5) + ylim(-2.5, 5) +
+    geom_smooth(method = loess, color = "darkorange", 
+                fill = "lightsalmon", se = TRUE) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+          axis.title.x = element_text(size = 14),
+          axis.title.y = element_text(size = 14),
+          axis.text = element_text(size = 12))
+
+plot_fancy
+```
+
+---
+
+
+## Guardar Gráficos
+
+```{r save-plots}
+# Guardar todos los gráficos generados
+ggsave(file = "./output/scatter_simple.pdf", plot = plot_simple)
+ggsave(file = "./output/scatter_normal.pdf", plot = plot_normal)
+ggsave(file = "./output/scatter_fancy.pdf", plot = plot_fancy)
+
+cat("Gráficos guardados exitosamente en la carpeta ./output/")
+```
+

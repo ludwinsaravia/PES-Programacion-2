@@ -1,0 +1,267 @@
+---
+title: "Figuras en R"
+subtitle: "Distribuciones a través del Tiempo"
+author: "Ángelo Gutiérrez Daza"
+date: "2025-10-03"
+format: 
+  revealjs:
+    theme: dracula
+    smaller: true
+    scrollable: true
+    slide-number: true
+    chalkboard: true
+    preview-links: auto
+    logo: "./input/Logo-Banco-de-Guatemala.png"
+    footer: "Programación II - Banco de Guatemala"
+---
+
+## Inicialización y Librerías
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r libraries}
+# Librerías usadas
+library(dplyr)
+library(readr)
+library(lubridate)
+library(ggplot2)
+library(tidyr)
+library(stringr)
+library(magrittr)
+library(ggridges)
+library(viridis)
+library(hrbrthemes)
+library(forcats)
+
+# Limpiar entorno de trabajo
+graphics.off()
+rm(list = ls())
+cat("\014")
+```
+
+---
+
+## Carga de Datos
+
+```{r load-data}
+# Comenzemos por cargar el CSV con la muestra seleccionada
+ipc_data <- read_csv("./output/selected_data.csv")
+
+# Mostrar primeras filas
+head(ipc_data)
+```
+
+---
+
+## Construcción de Índices de Inflación Anual
+
+```{r inflation-calculation}
+# Para cada item y fecha, vamos a calcular la inflación anual
+ipc_data %<>%
+    group_by(id_item) %>%
+    arrange(t_date) %>%
+    mutate(
+        ipc_lag12 = lag(ipc, n = 12, order_by = t_date),
+        inf12m = (ipc / ipc_lag12 - 1) * 100
+    ) %>%
+    ungroup()
+
+# Eliminar valores NA de los primeros 12 meses
+ipc_data %<>% filter(!is.na(inf12m))
+
+# Mostrar resultado
+head(ipc_data %>% select(t_date, id_item, descr, ipc, inf12m))
+```
+
+---
+
+## Preparación de Datos Temporales
+
+```{r temporal-data-prep}
+# Enfoquémonos en la inflación de los items en diciembre de cada año
+# Seleccionando años específicos para análisis comparativo
+inf12m_plot <- ipc_data %>%
+    filter(id_nivel == "Item", month(t_date) == 12) %>%
+    mutate(t_year = year(t_date)) %>%
+    filter(t_year %in% c(2014, 2016, 2018, 2020, 2022)) %>% 
+    select(t_year, id_item, inf12m)
+
+# Mostrar resumen de datos
+cat("Años seleccionados:", paste(sort(unique(inf12m_plot$t_year)), collapse = ", "))
+cat("\nNúmero de items por año:")
+print(table(inf12m_plot$t_year))
+```
+
+---
+
+## Box Plot: Código
+
+```{r boxplot-code, eval=FALSE}
+# Box plot para comparar distribuciones a través del tiempo
+box_plot <- inf12m_plot %>%
+    ggplot(aes(x = factor(t_year), y = inf12m, fill = factor(t_year))) +
+    geom_boxplot(alpha = 0.3, outliers = FALSE) +
+    labs(
+        title = "Distribución de la inflación anual de los items del IPC",
+        x = "Año",
+        y = "Inflación anual (%)"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "none") +
+    scale_fill_brewer(palette = "Dark2")
+
+box_plot
+```
+
+---
+
+## Box Plot: Resultado
+
+```{r boxplot-output, echo=FALSE}
+# Box plot para comparar distribuciones a través del tiempo
+box_plot <- inf12m_plot %>%
+    ggplot(aes(x = factor(t_year), y = inf12m, fill = factor(t_year))) +
+    geom_boxplot(alpha = 0.3, outliers = FALSE) +
+    labs(
+        title = "Distribución de la inflación anual de los items del IPC",
+        x = "Año",
+        y = "Inflación anual (%)"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "none") +
+    scale_fill_brewer(palette = "Dark2")
+
+box_plot
+```
+
+---
+
+## Ridge Plot Estándar: Código
+
+```{r ridge-standard-code, eval=FALSE}
+# Ridge plot para mostrar distribuciones completas
+min_x <- -15; max_x <- 15
+
+ridge_plot <- inf12m_plot %>%
+    mutate(inf12m = if_else(inf12m < min_x, min_x, inf12m),
+           inf12m = if_else(inf12m > max_x, max_x, inf12m)) %>%    
+    ggplot(aes(x = inf12m, y = factor(t_year), fill = factor(t_year))) +
+    geom_density_ridges(alpha = 0.7, scale = 1.5) +
+    labs(
+        title = "Distribución de la inflación anual de los items del IPC",
+        x = "Inflación anual (%)",
+        y = "Año"
+    ) +
+    theme_ipsum_pub() +
+    theme(legend.position = "none") +
+    scale_fill_brewer(palette = "Dark2")
+```
+
+---
+
+## Ridge Plot Estándar: Resultado
+
+```{r ridge-standard-output, echo=FALSE}
+# Ridge plot para mostrar distribuciones completas
+min_x <- -15; max_x <- 15
+
+ridge_plot <- inf12m_plot %>%
+    mutate(inf12m = if_else(inf12m < min_x, min_x, inf12m),
+           inf12m = if_else(inf12m > max_x, max_x, inf12m)) %>%    
+    ggplot(aes(x = inf12m, y = factor(t_year), fill = factor(t_year))) +
+    geom_density_ridges(alpha = 0.7, scale = 1.5) +
+    labs(
+        title = "Distribución de la inflación anual de los items del IPC",
+        x = "Inflación anual (%)",
+        y = "Año"
+    ) +
+    theme_ipsum_pub() +
+    theme(legend.position = "none") +
+    scale_fill_brewer(palette = "Dark2")
+
+ridge_plot
+```
+
+---
+
+## Ridge Plot con Gradiente: Código
+
+```{r ridge-gradient-code, eval=FALSE}
+# Ridge plot con gradiente de color basado en valores
+min_x <- -20; max_x <- 20
+
+ridge_plot_2 <- inf12m_plot %>%
+    mutate(inf12m = if_else(inf12m < min_x, min_x, inf12m),
+           inf12m = if_else(inf12m > max_x, max_x, inf12m)) %>%    
+    ggplot(aes(x = inf12m, y = fct_rev(factor(t_year)), fill = ..x..)) +
+    geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+    scale_fill_viridis(name = "Inflación Anual", option = "C") +
+    labs(title = "Distribución de la inflación anual de los items del IPC", 
+         x = "Inflación Anual (%)") +
+    theme_ipsum() +
+    theme(
+        legend.position = "none",
+        panel.spacing = unit(0.1, "lines"),
+        strip.text.x = element_text(size = 8)
+    )
+```
+
+---
+
+## Ridge Plot con Gradiente: Resultado
+
+```{r ridge-gradient-output, echo=FALSE}
+# Ridge plot con gradiente de color basado en valores
+min_x <- -20; max_x <- 20
+
+ridge_plot_2 <- inf12m_plot %>%
+    mutate(inf12m = if_else(inf12m < min_x, min_x, inf12m),
+           inf12m = if_else(inf12m > max_x, max_x, inf12m)) %>%    
+    ggplot(aes(x = inf12m, y = fct_rev(factor(t_year)), fill = ..x..)) +
+    geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+    scale_fill_viridis(name = "Inflación Anual", option = "C") +
+    labs(title = "Distribución de la inflación anual de los items del IPC", 
+         x = "Inflación Anual (%)") +
+    theme_ipsum() +
+    theme(
+        legend.position = "none",
+        panel.spacing = unit(0.1, "lines"),
+        strip.text.x = element_text(size = 8)
+    )
+
+ridge_plot_2
+```
+
+---
+
+## Guardar Gráficos
+
+```{r save-plots}
+# Guardar todos los gráficos generados
+#ggsave(file = "./output/boxplot_simple.pdf", plot = box_plot)
+#ggsave(file = "./output/ridgeplot_fancy.pdf", plot = ridge_plot)
+#ggsave(file = "./output/ridgeplot_fancy_too.pdf", plot = ridge_plot_2)
+
+cat("Gráficos guardados exitosamente en la carpeta ./output/")
+```
+
+---
+
+## Librerías Especializadas Utilizadas
+
+### `ggridges`
+- Especializada en ridge plots (gráficos de cresta)
+- Permite comparaciones de distribuciones múltiples
+- Escalado automático para visualización óptima
+
+### `viridis` 
+- Paletas de colores perceptualmente uniformes
+- Accesible para personas con daltonismo
+- Escalas continuas para gradientes
+
+### `hrbrthemes`
+- Temas modernos y profesionales para ggplot2
+- Tipografías optimizadas para presentaciones
+- Estética minimalista y limpia
