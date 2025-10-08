@@ -75,7 +75,7 @@ attr(wb_dataTab$y_t_wb, "label") <- NULL
 library(fredr)
 
 # fredr_set_key("your_fred_api_key_here") # Reemplace con su clave de API de FRED
-fredr_set_key("774d3d91735228d35827d32e5c405dc8") # Reemplace con su clave de API de FRED
+fredr_set_key("X") # Reemplace con su clave de API de FRED
 
 fred_recovered_data_gdp <- fredr(
   series_id = "RGDPNAGTA666NRUG",
