@@ -242,7 +242,7 @@ predictions_plot <- predictions %>%
         x = "Inflación de Alimentos (%, 12 meses)",
         y = "Inflación General (%, 12 meses)"
     ) +
-    geom_point(data = dataTab, aes(x = Alimentos, y = General),
+    ?geom_point(data = dataTab, aes(x = Alimentos, y = General), 
                color = "darkblue", size = 2, alpha = 0.6) +
     theme_minimal() +
     theme(plot.subtitle = element_text(size = 10, color = "gray50"))
@@ -301,3 +301,4 @@ modelsummary::modelplot(model_list,
           axis.title.x = element_text(size = 14),
           axis.title.y = element_text(size = 14),
           axis.text = element_text(size = 12))
+

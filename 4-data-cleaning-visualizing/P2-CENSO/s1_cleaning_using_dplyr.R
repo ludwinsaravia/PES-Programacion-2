@@ -60,6 +60,14 @@ selected_data <- censo %>%
         desocupado        = "PDESOC"
     )
 
+                        "NGDP_R",
+                        "NGDP_RPCH",	
+                        "NGDP_D",	
+                        "PCPI",	
+                        "PCPIPCH",
+                        "PCPIE"	,	
+                        "PCPIEPCH"
+
 
 # Veamos la estructura de los datos nuevamente
 glimpse(selected_data)
