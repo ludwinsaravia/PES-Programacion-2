@@ -31,7 +31,7 @@ nT            <- 90
 
 # Esta función replica exactamente tu código original completo
 frank_vs_mou <- function() {
-    nP <- 21
+    nP <- 11
     nSim <- 10000
     pFrank_vec <- seq(0, 1, length.out = nP)
     probFrankGane <- rep(NaN, nP)
@@ -82,7 +82,7 @@ frank_vs_mou <- function() {
 
 benchmark_completo <- microbenchmark(
     codigo_original = frank_vs_mou(),
-    times = 56
+    times = 10
 )
 
 print(benchmark_completo)

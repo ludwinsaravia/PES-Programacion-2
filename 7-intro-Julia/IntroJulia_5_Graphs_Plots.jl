@@ -474,14 +474,14 @@ end
 function step!(l::Lorenz)
     dx = l.σ*(l.y - l.x)       ; l.x += l.dt * dx
     dy = l.x*(l.ρ - l.z) - l.y ; l.y += l.dt * dy
-    dz = l.x*l.y - l.β*l.z     ; l.z += l.dt * dz
+    dz = l.x*l.y - l.β*l.z     ; l.                  z += l.dt * dz
 end
 
 # Crear atractor de Lorenz animado (descomenta para ejecutar)
-# attractor = Lorenz((dt = 0.02, σ = 10., ρ = 28., β = 8//3, x = 1., y = 1., z = 1.)...)
-# plt = plot3d(1, xlim=(-25,25), ylim=(-25,25), zlim=(0,50),
-#                 title = "Atractor de Lorenz", marker = 2)
-# anim = @gif for i=1:300  # Reducido para ejemplo
-#     step!(attractor)
-#     push!(plt, attractor.x, attractor.y, attractor.z)
-# end every 10
+attractor = Lorenz((dt = 0.02, σ = 10., ρ = 28., β = 8//3, x = 1., y = 1., z = 1.)...)
+plt = plot3d(1, xlim=(-25,25), ylim=(-25,25), zlim=(0,50),
+                title = "Atractor de Lorenz", marker = 2)
+anim = @gif for i=1:300  # Reducido para ejemplo
+    step!(attractor)
+    push!(plt, attractor.x, attractor.y, attractor.z)
+end every 10
