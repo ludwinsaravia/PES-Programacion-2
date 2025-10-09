@@ -24,6 +24,7 @@ agregando otro ruido blanco gaussiano. Este enfoque es útil para capturar cambi
 graduales en el talento de Nakamura a lo largo del tiempo.
 
 Sus ecuaciones son las siguientes:
+
 $$
 \begin{align}
 y_t &= \mu_t + \varepsilon_t, \quad \varepsilon_t \sim \mathcal{N}(0, \sigma^2_{\varepsilon}) \\
@@ -38,6 +39,7 @@ de cambio a lo largo del tiempo. Al nivel también se le agrega un ruido blanco
 gaussiano, que permite capturar tendencias más complejas en la evolución del talento.
 
 Sus ecuaciones son las siguientes:
+
 $$
 \begin{align}
 y_t &= \mu_t + \varepsilon_t, \quad \varepsilon_t \sim \mathcal{N}(0, \sigma^2_{\varepsilon}) \\
