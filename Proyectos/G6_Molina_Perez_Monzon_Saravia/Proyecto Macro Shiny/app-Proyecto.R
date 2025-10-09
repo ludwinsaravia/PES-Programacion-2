@@ -1,5 +1,6 @@
-#VERSION PARA MAPA
-#PRueba commit version beta 1.2
+#VERSIÓN FINAL
+
+# Carga de librerías -------------------------------------------------------------------------------
 
 library(shiny)
 library(bslib) #personalización aspecto visual usando framework Bootstrap
@@ -8,9 +9,7 @@ library(tidyverse)
 library(systemfonts)
 library(scales) #de Tidyverse, formatea valores numéricos
 
-
-# Cambiar - analysis_shiny son datos de prueba
-source("analysis_anual.R")
+# Llamado de funciones externas  -------------------------------------------------------------------
 source("clean_data_anual.R")
 source("Plot_Map.R")
 source("analysis_pro.R")
