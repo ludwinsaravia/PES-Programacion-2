@@ -1,3 +1,59 @@
-# README
-
+# README 
 PES-II-2025
+---
+# Monitor Departamental de Indicadores (MDI-GT)
+---
+Es una herramienta interactiva para visualizar y comparar, por departamento, indicadores clave de Guatemala (inflación, analfabetismo, cobertura IGSS, recaudación tributaria per cápita, desempleo absoluto, entre otros).Integra fuentes oficiales, estandariza variables y ofrece un mapa de calor y paneles interactivos con **Leaflet + Shiny**.
+### Integrantes 
+- Nuria Saraí Torres Aldana
+- David Alejandro del Cid de León 
+- Diego Andrés Menendez Barillas 
+
+---
+## Planteamiento del problema
+- La información no está centralizada, o estandarizada, ni desagregada consistentemente por **regiones** o **departamentos**.  
+Lo que dificulta: 
+(1) el monitoreo oportuno, 
+(2) Comparabilidad entre fuentes y 
+(3) Construcción de políticas basadas en evidencia.
+---
+## Planteando una solución (Mapa de calor)
+- Se construye un **mapa de calor** por departamento.
+- Detalle por departamento según indicador y año.
+---
+## Librerías que utilizamos 
+
+### Manipulación de texto y escalas: `stringi`, `stringr`, `scales`
+```r
+# stringi / stringr: limpieza y estadanrización
+library(stringi); library(stringr); library(scales)
+
+# scales: formateo numérico y etiquetas para mapas/plots
+```
+### Librería `leaflet` (LIBRERÍA PRINCIPAL)
+Genera el mapa base según las espeficiaciones dadas
+```
+### `sf` (simple features) en conjunto con TopoJSON/GeoJSON
+Crea un "dataframe" que incluye una columna "Geometry" 
+```
+---
+## Lectura (GeoJSON o shapefile ya convertido)
+
+### Shiny + Leaflet (reactividad) y `leafletProxy`
+
+La combinación del mapa y la reactividad permite la interacción del usuario y obtención de respuesta. 
+
+---
+## Indicadores Resultado
+
+1) Inflación: Contribución por departamento (Proxy).
+2) Tasa de analfabetismo 2023
+3) Cobertura IGSS entre ocupados
+4) Recaudación tributaria per cápita
+---
+### 5) Desempleados (absoluto)
+#**Fuentes**
+- INE / ENCOVI / Censo 2018
+- IGSS 
+- SAT 
+---
