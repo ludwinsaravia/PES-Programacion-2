@@ -27,7 +27,7 @@ Sus ecuaciones son las siguientes:
 ```latex
 \begin{equation}
  y_t = \mu_t + \varepsilon_t, \;\varepsilon_t \sim \mathcal{N} \left(0, \sigma^2_{\varepsilon} \right)  \\
-$$ \mu_t = \mu_{t-1} + \eta_{t}, \; \eta_{t} \sim \mathcal{N} \left(0, \sigma^2_{\eta} \right)
+ \mu_t = \mu_{t-1} + \eta_{t}, \; \eta_{t} \sim \mathcal{N} \left(0, \sigma^2_{\eta} \right)
 \end{equation}
 ```
 
@@ -42,7 +42,7 @@ Sus ecuaciones son las siguientes:
 \begin{equation}
  y_t = \mu_t + \varepsilon_t, \;\varepsilon_t \sim \mathcal{N} \left(0, \sigma^2_{\varepsilon} \right)  \\
  \mu_t = \mu_{t-1} + \beta_{t-1} + \eta_{1_t}, \; \eta_{1_t} \sim \mathcal{N} \left(0, \sigma^2_{\eta_1} \right) \\
-$$ \beta_t = \beta_{t-1} + \eta_{2_t}, \; \eta_{2_t} \sim \mathcal{N} \left(0, \sigma^2_{\eta_2} \right)
+ \beta_t = \beta_{t-1} + \eta_{2_t}, \; \eta_{2_t} \sim \mathcal{N} \left(0, \sigma^2_{\eta_2} \right)
 \end{equation}
 ```
 
