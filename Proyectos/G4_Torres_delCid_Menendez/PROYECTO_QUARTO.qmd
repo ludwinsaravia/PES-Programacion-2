@@ -1,0 +1,923 @@
+---
+title: "MDI-GT: Monitor Departamental de Indicadores"
+format: 
+  dashboard:
+    theme: sandstone
+    orientation: rows
+server: shiny
+---
+
+```{r, context="setup", include=FALSE}
+# =========================================================================
+# 1. BLOQUE DE CONFIGURACIÓN (SETUP)
+# =========================================================================
+# Este bloque se ejecuta una sola vez al iniciar el dashboard.
+# Aquí cargamos todas las librerías, definimos funciones y leemos los datos.
+# `include=FALSE` evita que este código se muestre en el dashboard final.
+# =========================================================================
+# --- Carga de Librerías ---
+library(base64enc)
+library(shiny)
+library(leaflet)
+library(sf)
+library(dplyr)
+library(readr)
+library(stringr)
+library(stringi)
+library(scales)
+
+# --- Función para incrustar imágenes ---
+embed_image_base64 <- function(file_path, width = "125%") {
+  if (!file.exists(file_path)) {
+    # Si no encuentra el archivo, mostrará un error claro en el dashboard
+    return(tags$p(
+      style = "color: red; font-weight: bold;", 
+      paste("Error: No se encontró el archivo:", file_path)
+    ))
+  }
+  img_data <- base64enc::dataURI(file = file_path, mime = "image/png")
+  return(tags$img(src = img_data, width = width))
+}
+
+
+# ---------- RUTAS
+path_geojson <- "Source/deptos.json" # tu geojson/json
+path_infla <- "output/contribucion_inflacion_ponderada.csv"
+path_recapc <- "output/recaudacion_per_capita_departamento.csv"
+path_igss  <- "output/afiliados_igss_calculado.csv"
+path_analfabetismo <- "output/encovi_analisis_analfabetismo_2023.csv"
+path_laboral <- "output/datos_laborales_departamentales_consolidados.csv"
+
+# ---------- Helpers
+norm_txt <- function(x){
+  x <- as.character(x); x <- str_squish(x)
+  x <- stringi::stri_trans_general(x, "Latin-ASCII")
+  toupper(x)
+}
+# Formateadores
+fmt_pct <- function(x){ ifelse(is.finite(x), sprintf("%.2f%%", x), "s/d") } # x ya viene en % (ej: 3.12)
+fmt_q <- function(x){ ifelse(is.finite(x), dollar(x, big.mark=",", decimal_mark=".", prefix="Q "), "s/d") }
+fmt_prop <- function(x){ ifelse(is.finite(x), scales::percent(x, accuracy = 0.1), "s/d") }
+fmt_pct_igss <- function(x){ ifelse(is.finite(x), sprintf("%.2f%%", x), "s/d") }
+fmt_pct_analfabetismo <- function(x){ ifelse(is.finite(x), sprintf("%.2f%%", x), "s/d") }
+fmt_pct_desempleo <- function(x){ ifelse(is.finite(x), sprintf("%.2f%%", x * 100), "s/d") }
+fmt_abs <- function(x){ ifelse(is.finite(x), format(round(x, 0), big.mark = ",", scientific = FALSE), "s/d") }
+
+
+mes_to_num <- function(m){
+  dic <- c("enero"=1,"febrero"=2,"marzo"=3,"abril"=4,"mayo"=5,"junio"=6,
+           "julio"=7,"agosto"=8,"septiembre"=9,"setiembre"=9,"octubre"=10,
+           "noviembre"=11,"diciembre"=12)
+  unname(dic[tolower(trimws(m))])
+}
+mes_nombre_es <- function(nm){
+  meses <- c("Enero","Febrero","Marzo","Abril","Mayo","Junio",
+             "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre")
+  out <- rep(NA_character_, length(nm)); ok <- is.finite(nm) & nm>=1 & nm<=12
+  out[ok] <- meses[nm[ok]]; out
+}
+
+leer_csv_seguro <- function(path){
+  if (!file.exists(path)) stop("No se encontro el archivo: ", path)
+  suppressMessages(readr::read_csv(path, show_col_types = FALSE))
+}
+
+# Bins/Domain seguros (evita "los breaks no son únicos")
+# Capa reactiva
+
+safe_bins_domain <- function(vals, nbins = 7){
+  vals <- vals[is.finite(vals)]
+  if (!length(vals)) return(list(bins = c(0, 1), domain = c(0, 1)))
+  u <- sort(unique(vals))
+  if (length(u) == 1L) {
+    eps <- max(1e-9, abs(u[1]) * 1e-6)
+    return(list(bins = c(u[1]-eps, u[1]+eps), domain = c(u[1]-eps, u[1]+eps)))
+  }
+  q <- unique(quantile(vals, probs = seq(0, 1, length.out = max(2, nbins)), na.rm = TRUE))
+  if (length(q) < 2L || diff(range(q)) == 0) {
+    eps <- max(1e-9, abs(min(vals))*1e-6, abs(max(vals))*1e-6)
+    return(list(bins = c(min(vals)-eps, max(vals)+eps), domain = c(min(vals)-eps, max(vals)+eps)))
+  }
+  list(bins = q, domain = range(vals, finite = TRUE))
+}
+
+# Quita %, Q, comas, espacios -> número
+to_num <- function(v){
+  suppressWarnings(
+    readr::parse_number(
+      as.character(v),
+      locale = readr::locale(decimal_mark=".", grouping_mark=",")
+    )
+  )
+}
+
+
+# ---------- GEO (Sin cambios)
+shp <- sf::st_read(path_geojson, quiet = TRUE)
+cand <- names(shp)[grepl("NOMBRE|DEPTO|DEPART|shapeName|NAME", names(shp), ignore.case=TRUE)]
+if (!length(cand)) stop("No encuentro columna con el nombre del departamento en el GeoJSON.")
+NAME_COL <- cand[1]
+shp <- shp %>% mutate(DEPARTAMENTO_MAP = norm_txt(.data[[NAME_COL]]))
+
+# ---------- INFLACION (proxy) DESDE CSV (Sin cambios)
+infla_raw <- leer_csv_seguro(path_infla)
+col_depto <- names(infla_raw)[grepl("^depart|^depar", names(infla_raw), ignore.case = TRUE)]
+col_mes <- names(infla_raw)[grepl("^mes$", names(infla_raw), ignore.case = TRUE)]
+col_anio <- names(infla_raw)[grepl("^anio$|^año$|^ano$", names(infla_raw), ignore.case = TRUE)]
+col_region<- names(infla_raw)[grepl("^region$", names(infla_raw), ignore.case = TRUE)]
+col_prop <- names(infla_raw)[grepl("propor", names(infla_raw), ignore.case = TRUE)]
+col_infr <- names(infla_raw)[grepl("inflacion.*region", names(infla_raw), ignore.case = TRUE)]
+col_contr <- names(infla_raw)[grepl("contribucion.*infl.*depto", names(infla_raw), ignore.case = TRUE)]
+if (!length(col_contr)) col_contr <- names(infla_raw)[grepl("contribucion.*infl", names(infla_raw), ignore.case = TRUE)]
+
+if (!length(col_depto) || !length(col_mes) || !length(col_anio) || !length(col_contr)) stop("CSV de inflacion: faltan columnas criticas.")
+
+infla <- infla_raw %>%
+  transmute(
+    DEPARTAMENTO      = norm_txt(.data[[col_depto[1]]]),
+    Mes               = as.character(.data[[col_mes[1]]]),
+    Anio              = as.integer(.data[[col_anio[1]]]),
+    Region            = if (length(col_region)) as.character(.data[[col_region[1]]]) else NA_character_,
+    Proporcion_Regional = if (length(col_prop)) to_num(.data[[col_prop[1]]]) else NA_real_,
+    Inflacion_Regional = if (length(col_infr)) to_num(.data[[col_infr[1]]]) else NA_real_,
+    Contribucion_Inflacion_Depto = to_num(.data[[col_contr[1]]])
+  ) %>%
+  mutate(
+    Mes_num = mes_to_num(Mes),
+    fecha = as.Date(sprintf("%d-%02d-01", Anio, Mes_num)),
+    label = paste0(mes_nombre_es(Mes_num), " ", Anio)
+  ) %>%
+  filter(!is.na(Contribucion_Inflacion_Depto), !is.na(fecha))
+
+fechas_infla_tbl <- infla %>% distinct(fecha, label) %>% arrange(fecha)
+
+
+# ---------- RECAUDACION PER CAPITA DESDE CSV (Sin cambios)
+recpc_raw <- leer_csv_seguro(path_recapc)
+col_depto_r <- names(recpc_raw)[grepl("^depart|^depar", names(recpc_raw), ignore.case = TRUE)]
+if (!length(col_depto_r)) col_depto_r <- "DEPARTAME"
+col_anio_r <- names(recpc_raw)[grepl("^anio$|^año$|^ano$|^year$", names(recpc_raw), ignore.case = TRUE)]
+col_recpc_total <- names(recpc_raw)[grepl("recaud.*per.*capita.*total", names(recpc_raw), ignore.case = TRUE)]
+col_recpc_iva  <- names(recpc_raw)[grepl("recaud.*per.*capita.*iva", names(recpc_raw), ignore.case = TRUE)]
+col_prop_isr  <- names(recpc_raw)[grepl("proporcion_isr", names(recpc_raw), ignore.case = TRUE)]
+col_prop_iva  <- names(recpc_raw)[grepl("proporcion_iva", names(recpc_raw), ignore.case = TRUE)]
+col_prop_otros <- names(recpc_raw)[grepl("proporcion_otros", names(recpc_raw), ignore.case = TRUE)]
+
+if (any(c(length(col_depto_r), length(col_anio_r), length(col_recpc_total)) == 0)) {
+  stop("CSV de recaudacion: faltan columnas criticas.")
+}
+
+recpc <- recpc_raw %>%
+  transmute(
+    DEPARTAMENTO = norm_txt(.data[[col_depto_r[1]]]),
+    Anio    = as.integer(.data[[col_anio_r[1]]]),
+    Recaudacion_Per_Capita_TOTAL = to_num(.data[[col_recpc_total[1]]]),
+    Proporcion_ISR = if (length(col_prop_isr)) to_num(.data[[col_prop_isr[1]]]) else NA_real_,
+    Proporcion_IVA = if (length(col_prop_iva)) to_num(.data[[col_prop_iva[1]]]) else NA_real_,
+    Proporcion_Otros_Impuestos = if (length(col_prop_otros)) to_num(.data[[col_prop_otros[1]]]) else NA_real_,
+    Recaudacion_Per_Capita_IVA = if (length(col_recpc_iva)) to_num(.data[[col_recpc_iva[1]]]) else NA_real_
+  ) %>%
+  filter(!is.na(Anio), is.finite(Recaudacion_Per_Capita_TOTAL))
+
+anios_rec <- sort(unique(recpc$Anio))
+
+# ---------- COBERTURA IGSS ENTRE OCUPADOS DESDE CSV (Sin cambios)
+igss_raw <- leer_csv_seguro(path_igss)
+col_igss_anio <- names(igss_raw)[grepl("ANIO", names(igss_raw), ignore.case = TRUE)]
+col_igss_depto <- names(igss_raw)[grepl("DEPARTAMENTO", names(igss_raw), ignore.case = TRUE)]
+col_igss_afiliados <- names(igss_raw)[grepl("Numero_Afiliados", names(igss_raw), ignore.case = TRUE)]
+col_igss_ocupados <- names(igss_raw)[grepl("POBLACION_OCUPADA", names(igss_raw), ignore.case = TRUE)]
+col_igss_cobertura <- names(igss_raw)[grepl("Cobertura_IGSS_entre_ocupados", names(igss_raw), ignore.case = TRUE)]
+
+if (length(col_igss_cobertura) == 0) stop("CSV de IGSS: Falta columna Cobertura_IGSS_entre_ocupados.")
+
+igss <- igss_raw %>%
+  transmute(
+    Anio = as.integer(.data[[col_igss_anio[1]]]),
+    DEPARTAMENTO = norm_txt(.data[[col_igss_depto[1]]]),
+    Numero_Afiliados = to_num(.data[[col_igss_afiliados[1]]]),
+    Poblacion_Ocupada = to_num(.data[[col_igss_ocupados[1]]]),
+    Cobertura_IGSS_entre_ocupados = to_num(.data[[col_igss_cobertura[1]]])
+  ) %>%
+  filter(is.finite(Anio), is.finite(Cobertura_IGSS_entre_ocupados)) %>%
+  filter(DEPARTAMENTO != "TOTAL", nzchar(DEPARTAMENTO))
+
+anios_igss <- sort(unique(igss$Anio))
+
+
+# ---------- TASA DE ANALFABETISMO DESDE CSV (Sin cambios)
+analfabetismo_raw <- leer_csv_seguro(path_analfabetismo)
+col_analfa_anio <- names(analfabetismo_raw)[grepl("ANIO", names(analfabetismo_raw), ignore.case = TRUE)]
+col_analfa_depto <- names(analfabetismo_raw)[grepl("^DEPTO$", names(analfabetismo_raw), ignore.case = TRUE)]
+col_analfa_tasa <- names(analfabetismo_raw)[grepl("%Analfabetismo", names(analfabetismo_raw), ignore.case = TRUE)]
+col_analfa_pob <- names(analfabetismo_raw)[grepl("POBLACION_2023", names(analfabetismo_raw), ignore.case = TRUE)]
+
+
+if (length(col_analfa_tasa) == 0) stop("CSV de Analfabetismo: Falta columna %Analfabetismo.")
+
+analfabetismo <- analfabetismo_raw %>%
+  transmute(
+    Anio = as.integer(.data[[col_analfa_anio[1]]]),
+    DEPARTAMENTO = norm_txt(.data[[col_analfa_depto[1]]]),
+    Poblacion_2023 = to_num(.data[[col_analfa_pob[1]]]),
+    Tasa_Analfabetismo = to_num(.data[[col_analfa_tasa[1]]]) # Ya en porcentaje (ej: 31.02)
+  ) %>%
+  filter(is.finite(Anio), is.finite(Tasa_Analfabetismo)) %>%
+  filter(nzchar(DEPARTAMENTO))
+
+anios_analfabetismo <- sort(unique(analfabetismo$Anio))
+
+
+# ---------- DATOS LABORALES (Tasa Desempleo y Desempleados Absolutos)
+desempleo_raw <- leer_csv_seguro(path_laboral)
+col_desemp_anio <- names(desempleo_raw)[grepl("^ANIO$", names(desempleo_raw), ignore.case = TRUE)]
+col_desemp_depto <- names(desempleo_raw)[grepl("^DEPARTAMENTO$", names(desempleo_raw), ignore.case = TRUE)]
+col_desemp_tasa <- names(desempleo_raw)[grepl("TASA_DESEMPLEO", names(desempleo_raw), ignore.case = TRUE)]
+col_desemp_abs <- names(desempleo_raw)[grepl("DESEMPLEADOS", names(desempleo_raw), ignore.case = TRUE)]
+
+
+if (length(col_desemp_tasa) == 0) stop("CSV de Datos Laborales: Falta columna TASA_DESEMPLEO.")
+if (length(col_desemp_abs) == 0) stop("CSV de Datos Laborales: Falta columna DESEMPLEADOS.")
+
+desempleo <- desempleo_raw %>%
+  transmute(
+    Anio = as.integer(.data[[col_desemp_anio[1]]]),
+    DEPARTAMENTO = norm_txt(.data[[col_desemp_depto[1]]]),
+    Tasa_Desempleo = to_num(.data[[col_desemp_tasa[1]]]), # Viene como proporción (ej: 0.0222)
+    Desempleados_Abs = to_num(.data[[col_desemp_abs[1]]])
+  ) %>%
+  filter(is.finite(Anio), is.finite(Tasa_Desempleo)) %>%
+  filter(nzchar(DEPARTAMENTO))
+
+anios_desempleo <- sort(unique(desempleo$Anio))
+
+# Se crea un pool común de años para los indicadores basados en año (excluyendo Analfabetismo)
+anios_comunes <- sort(unique(c(anios_rec, anios_igss, anios_desempleo)))
+
+```
+
+## {.sidebar}
+
+### MDI-GT
+
+**Monitor Departamental de Indicadores**
+
+---
+**Banco de Guatemala**\
+*Programa de Estudios Superiores*\
+*2025*
+
+**Integrantes:**\
+-Nuria Saraí Torres Aldana\
+-David Alejandro Del Cid\
+-Diego Andrés Menendez
+
+## Visualizaciones {.tabset}
+
+### Presentación {.tabset}
+
+#### 1
+```{r}
+embed_image_base64("www/1.png")
+```
+
+#### 2
+```{r}
+embed_image_base64("www/2.png")
+```
+
+#### 3
+```{r}
+embed_image_base64("www/3.png")
+```
+
+#### 4
+```{r}
+embed_image_base64("www/4.png")
+```
+
+#### 5
+```{r}
+embed_image_base64("www/5.png")
+```
+
+#### 6
+```{r}
+embed_image_base64("www/6.png")
+```
+
+
+#### 7
+```{r}
+embed_image_base64("www/7.png")
+```
+
+#### 8
+```{r}
+embed_image_base64("www/8.png")
+```
+
+#### 9
+```{r}
+embed_image_base64("www/9.png")
+```
+
+#### 10
+```{r}
+embed_image_base64("www/10.png")
+```
+
+#### 11
+```{r}
+embed_image_base64("www/11.png")
+```
+
+
+#### 12
+```{r}
+embed_image_base64("www/12.png")
+```
+
+
+#### 13
+```{r}
+embed_image_base64("www/13.png")
+```
+
+
+#### 14
+```{r}
+embed_image_base64("www/14.png")
+```
+
+
+#### 15
+```{r}
+embed_image_base64("www/15.png")
+```
+
+
+#### 16
+```{r}
+embed_image_base64("www/16.png")
+```
+
+
+#### 17
+```{r}
+embed_image_base64("www/17.png")
+```
+
+
+#### 18
+```{r}
+embed_image_base64("www/18.png")
+```
+
+
+#### 19
+```{r}
+embed_image_base64("www/19.png")
+```
+
+#### 20
+```{r}
+embed_image_base64("www/20.png")
+```
+
+
+#### 21
+```{r}
+embed_image_base64("www/21.png")
+```
+
+### Ejemplo 1
+
+#### Fila de Contenido {height=100%}
+
+##### Columna de Controles {width="35%"}
+```{r}
+#| echo: true
+#| eval: false
+#| message: false
+#| warning: false
+
+# 1. Cargar la librería stringr (y dplyr para el ejemplo)
+library(stringr)
+library(dplyr)
+
+# 2. Crear nuestros datos de ejemplo
+productos <- tibble(
+    codigo = c("PROD-1021", "PROD_1022", "PROD-1023", "PROD_1024", "PROD-1025")
+)
+
+# 3. Proceso consolidado de detección y reemplazo
+reporte_codigos <- productos %>%
+    mutate(
+        # PASO DE DETECCIÓN: Creamos una columna que nos dice si el formato es antiguo.
+        # str_detect() devuelve TRUE si encuentra un guion bajo "_".
+        formato_antiguo = str_detect(codigo, "_"),
+        
+        # PASO DE REEMPLAZO: Creamos una columna con el código corregido.
+        # str_replace_all() busca todos los "_" y los reemplaza por "-".
+        codigo_corregido = str_replace_all(codigo, "_", "-")
+    )
+
+# 4. Mostrar el resultado
+print(reporte_codigos)
+```
+
+#### Columna del Mapa {width="65%"}
+```{r}
+#| echo: false
+#| eval: true
+#| message: false
+#| warning: false
+# 1. Cargar la librería stringr (y dplyr para el ejemplo)
+library(stringr)
+library(dplyr)
+
+# 2. Crear nuestros datos de ejemplo
+productos <- tibble(
+    codigo = c("PROD-1021", "PROD_1022", "PROD-1023", "PROD_1024", "PROD-1025")
+)
+
+# 3. Proceso consolidado de detección y reemplazo
+reporte_codigos <- productos %>%
+    mutate(
+        # PASO DE DETECCIÓN: Creamos una columna que nos dice si el formato es antiguo.
+        # str_detect() devuelve TRUE si encuentra un guion bajo "_".
+        formato_antiguo = str_detect(codigo, "_"),
+        
+        # PASO DE REEMPLAZO: Creamos una columna con el código corregido.
+        # str_replace_all() busca todos los "_" y los reemplaza por "-".
+        codigo_corregido = str_replace_all(codigo, "_", "-")
+    )
+
+# 4. Mostrar el resultado
+print(reporte_codigos)
+
+```
+
+### Ejemplo 2
+
+#### Fila de Contenido {height=100%}
+
+##### Columna de Controles {width="35%"}
+```{r}
+#| echo: true
+#| eval: false
+#| message: false
+#| warning: false
+# 1. Cargar la librería necesaria
+library(ggplot2)
+library(scales)
+
+# Datos de ejemplo: Ventas mensuales
+df <- data.frame(
+  mes = 1:6,
+  ventas = c(505980, 1250345, 899500, 2150000, 1785100, 450000)
+)
+# Datos de ejemplo: Crecimiento
+df$crecimiento <- c(0.05, 0.12, -0.02, 0.08, 0.15, 0.03)
+
+ggplot(df, aes(x = mes, y = crecimiento)) +
+    geom_line() +
+    scale_y_continuous(labels = label_percent()) +
+    labs(title = "Formato Porcentaje", y = "Crecimiento Mensual")
+```
+
+#### Columna del Mapa {width="65%"}
+```{r}
+#| echo: false
+#| eval: true
+#| message: false
+#| warning: false
+# 1. Cargar la librería necesaria
+library(ggplot2)
+library(scales)
+
+# Datos de ejemplo: Ventas mensuales
+df <- data.frame(
+  mes = 1:6,
+  ventas = c(505980, 1250345, 899500, 2150000, 1785100, 450000)
+)
+# Datos de ejemplo: Crecimiento
+df$crecimiento <- c(0.05, 0.12, -0.02, 0.08, 0.15, 0.03)
+
+ggplot(df, aes(x = mes, y = crecimiento)) +
+    geom_line() +
+    scale_y_continuous(labels = label_percent()) +
+    labs(title = "Formato Porcentaje", y = "Crecimiento Mensual")
+
+```
+
+### Ejemplo 3
+
+#### Fila de Contenido {height=100%}
+
+##### Columna de Controles {width="35%"}
+```{r}
+#| echo: true
+#| eval: false
+#| message: false
+#| warning: false
+# 1. Cargar la librería
+library(stringi)
+# 2. Crear un vector de texto con diversos caracteres especiales
+frases_originales <- c(
+    "El pingüino se bañó en el río.",
+    "José pidió perdón.",
+    "Açaí é uma fruta do Brasil.")
+# 3. Aplicar la transformación para convertir a ASCII
+frases_transformadas <- stri_trans_general(frases_originales, "Latin-ASCII")
+# 4. Imprimir para comparar el antes y el después
+print("--- ANTES ---")
+print(frases_originales)
+print("--- DESPUÉS ---")
+print(frases_transformadas)
+#==========================================================
+# 1. Crear un vector con precios en diferentes monedas
+precios <- c(
+    "Laptop: $999.00",
+    "Café: €3.50",
+    "Libro: ¥1200",
+    "Pasaje de bus: Q5.00"
+)
+simbolos_encontrados <- stri_extract_all_regex(precios, "\\p{Sc}")
+print(simbolos_encontrados)
+
+```
+
+#### Columna del Mapa {width="65%"}
+```{r}
+#| echo: false
+#| eval: true
+#| message: false
+#| warning: false
+# 1. Cargar la librería
+library(stringi)
+
+# 2. Crear un vector de texto con diversos caracteres especiales
+frases_originales <- c(
+    "El pingüino se bañó en el río.",
+    "José pidió perdón.",
+    "Açaí é uma fruta do Brasil.")
+
+# 3. Aplicar la transformación para convertir a ASCII
+frases_transformadas <- stri_trans_general(frases_originales, "Latin-ASCII")
+
+# 4. Imprimir para comparar el antes y el después
+print("--- ANTES ---")
+print(frases_originales)
+print("--- DESPUÉS ---")
+print(frases_transformadas)
+
+#==========================================================
+
+# 1. Crear un vector con precios en diferentes monedas
+precios <- c(
+    "Laptop: $999.00",
+    "Café: €3.50",
+    "Libro: ¥1200",
+    "Pasaje de bus: Q5.00"
+)
+# 2. Usar una expresión regular Unicode para encontrar todos los símbolos de moneda
+simbolos_encontrados <- stri_extract_all_regex(precios, "\\p{Sc}")
+
+# 3. Imprimir el resultado
+print(simbolos_encontrados)
+
+```
+
+
+### Ejemplo 4
+
+#### Fila de Contenido {height=100%}
+
+##### Columna de Controles {width="35%"}
+```{r}
+#| echo: true
+#| eval: false
+#| message: false
+#| warning: false
+# 1. Cargar la librería necesaria
+library(leaflet)
+# 2. Crear el mapa con el pipe %>%
+leaflet() %>%
+  addTiles() %>%
+  setView(lng = -102.5528, lat = 23.6345, zoom = 5)
+```
+
+#### Columna del Mapa {width="65%"}
+```{r}
+#| echo: false
+#| eval: true
+#| message: false
+#| warning: false
+# 1. Cargar la librería necesaria
+library(leaflet)
+# 2. Crear el mapa con el pipe %>%
+leaflet() %>%
+  addTiles() %>%
+  setView(lng = -102.5528, lat = 23.6345, zoom = 5)
+```
+
+### Ejemplo 5
+
+#### Fila de Contenido {height=100%}
+
+##### Columna de Controles {width="35%"}
+```{r}
+#| echo: true
+#| eval: false
+#| message: false
+#| warning: false
+# 1. Cargar la librería necesaria
+library(leaflet)
+# 2. Crear el mapa con el pipe %>%
+leaflet() %>%
+    addTiles() %>%
+    flyToBounds(lng1 = -90.2, lat1 = 13.0, lng2 = -87.7, lat2 = 14.5,
+                options = list(animate = TRUE))
+```
+
+#### Columna del Mapa {width="65%"}
+```{r}
+#| echo: false
+#| eval: true
+#| message: false
+#| warning: false
+# 1. Cargar la librería necesaria
+library(leaflet)
+# 2. Crear el mapa con el pipe %>%
+leaflet() %>%
+    addTiles() %>%
+    flyToBounds(lng1 = -90.2, lat1 = 13.0, lng2 = -87.7, lat2 = 14.5,
+                options = list(animate = TRUE))
+```
+
+### Ejemplo Coordenadas
+
+[Latitud: 16.01° Longitud: -90.04°](https://www.google.com/maps/place/16%C2%B000'41.7%22N+90%C2%B002'23.0%22W/@16.0160375,-90.1092007,12.75z/data=!4m4!3m3!8m2!3d16.011571!4d-90.039707?entry=ttu&g_ep=EgoyMDI1MTAwMS4wIKXMDSoASAFQAw%3D%3D)
+
+### Mapa de calor
+
+#### Fila de Contenido {height=100%}
+
+##### Columna de Controles {width="35%"}
+```{r}
+# =========================================================================
+# 2. BLOQUE DE UI (INTERFAZ DE USUARIO EN COLUMNA)
+# =========================================================================
+# Este bloque define los controles que aparecerán en la columna izquierda.
+# =========================================================================
+div(class="control-card",
+    h4("Filtros"), # Título para los controles
+    
+    selectInput("indicador", "Indicador:",
+                choices = c("Inflación departamental (proxy)"="inflacion",
+                            "Recaudación per cápita"="recaud_pc",
+                            "Cobertura IGSS entre ocupados"="cobertura_igss",
+                            "Tasa de Analfabetismo (%)"="analfabetismo",
+                            "Numero de desempleados"="desempleo"),
+                selected = "desempleo"),
+    
+    # Este UIOutput se llenará dinámicamente desde el server
+    uiOutput("ui_periodo"),
+    
+    sliderInput("nbins", "Número de Cortes (cuantiles):", min=5, max=15, value=7, step=1),
+    
+    helpText("Seleccione un indicador y el período para visualizar los datos."),
+    
+    br(),
+    
+    # Botón para cerrar la aplicación
+    actionButton("btn_close", "Cerrar Aplicación")
+)
+```
+
+#### Columna del Mapa {width="65%"}
+
+``` {r Mapa}
+# =========================================================================
+# CONTENEDOR DEL MAPA EN LA COLUMNA PRINCIPAL
+# =========================================================================
+h6(strong("Mapa de Indicadores Económicos por Departamento"))
+leafletOutput("mapa", height="75vh")
+```
+
+
+``` {r, context="server"}
+# =========================================================================
+# 3. BLOQUE LÓGICO (SERVER)
+# =========================================================================
+
+# --- Lógica para actualizar el selector de período (Sin cambios) ---
+output$ui_periodo <- renderUI({
+  req(input$indicador)
+
+  if (input$indicador == "inflacion") {
+    selectInput("fecha_infla", "Mes y Año:",
+                choices = setNames(fechas_infla_tbl$fecha, fechas_infla_tbl$label),
+                selected = max(fechas_infla_tbl$fecha))
+  } else {
+    anios_disponibles <- switch(input$indicador,
+                                "recaud_pc" = anios_rec,
+                                "cobertura_igss" = anios_igss,
+                                "analfabetismo" = anios_analfabetismo,
+                                "desempleo" = anios_desempleo,
+                                anios_comunes)
+    
+    selectInput("anio", "Año:",
+                choices = anios_disponibles,
+                selected = max(anios_disponibles))
+  }
+})
+
+# --- Filtrado de datos reactivo (CORREGIDO) ---
+datos_filtrados <- reactive({
+  req(input$indicador)
+
+  if (input$indicador == "inflacion") {
+    req(input$fecha_infla)
+    infla %>% 
+      filter(fecha == input$fecha_infla) %>%
+      rename(VALOR = Contribucion_Inflacion_Depto) %>%
+      mutate(
+        LABEL_VAL = fmt_pct(VALOR),
+        # AÑADIMOS la fecha como columna para que esté disponible en el popup
+        fecha_sel = as.Date(input$fecha_infla) 
+      )
+      
+  } else {
+    req(input$anio)
+    # Convertimos el año a entero una sola vez
+    anio_seleccionado <- as.integer(input$anio)
+    
+    switch(input$indicador,
+           "recaud_pc" = recpc %>%
+             filter(Anio == anio_seleccionado) %>%
+             rename(VALOR = Recaudacion_Per_Capita_TOTAL) %>%
+             mutate(
+               LABEL_VAL = fmt_q(VALOR),
+               # AÑADIMOS el año como columna
+               anio_sel = anio_seleccionado
+             ),
+             
+           "cobertura_igss" = igss %>%
+             filter(Anio == anio_seleccionado) %>%
+             rename(VALOR = Cobertura_IGSS_entre_ocupados) %>%
+             mutate(
+               LABEL_VAL = fmt_pct_igss(VALOR),
+               # AÑADIMOS el año como columna
+               anio_sel = anio_seleccionado
+             ),
+             
+           "analfabetismo" = analfabetismo %>%
+             filter(Anio == anio_seleccionado) %>%
+             rename(VALOR = Tasa_Analfabetismo) %>%
+             mutate(
+               LABEL_VAL = fmt_pct_analfabetismo(VALOR),
+               # AÑADIMOS el año como columna
+               anio_sel = anio_seleccionado
+             ),
+             
+           "desempleo" = desempleo %>%
+             filter(Anio == anio_seleccionado) %>%
+             rename(VALOR = Desempleados_Abs) %>%
+             mutate(
+               LABEL_VAL = fmt_abs(VALOR),
+               # AÑADIMOS el año como columna
+               anio_sel = anio_seleccionado
+             )
+    )
+  }
+})
+# --- 1. Renderizado del MAPA BASE (se ejecuta solo una vez) ---
+output$mapa <- renderLeaflet({
+  leaflet() %>%
+    addTiles() %>%
+    flyToBounds(lng1 = -92.25, lat1 = 13.74,
+                lng2 = -88.20, lat2 = 17.82,
+                options = list(animate = TRUE))
+})
+
+# --- 2. Observador para ACTUALIZAR las capas del mapa dinámicamente ---
+observe({
+  # Requerimos que los inputs necesarios tengan un valor antes de continuar
+  req(input$indicador, input$nbins)
+
+  # Unimos los datos geográficos con los datos filtrados
+  datos_mapa <- shp %>%
+    left_join(datos_filtrados(), by = c("DEPARTAMENTO_MAP" = "DEPARTAMENTO"))
+  
+  # Si no hay datos, detenemos la actualización del mapa
+  req(!all(is.na(datos_mapa$VALOR)))
+
+  # --- SELECCIÓN DINÁMICA DE PALETA DE COLORES ---
+  palette_name <- switch(input$indicador,
+                         "inflacion" = "RdYlGn",
+                         "recaud_pc" = "YlGnBu",
+                         "cobertura_igss" = "YlGn",
+                         "analfabetismo" = "YlOrRd",
+                         "desempleo" = "Reds",
+                         "YlOrRd"
+  )
+  nombre_indicador <- switch(input$indicador,
+                           "inflacion" = "Contribución a inflación nacional (%)",
+                         "recaud_pc" = "Recaudación Per Cápita (Q)",
+                         "cobertura_igss" = "Cobertura IGSS entre ocupados (%)",
+                         "analfabetismo" = "Tasa de analfabetismo (%)",
+                         "desempleo" = "Número de Desempleados"
+  )
+  
+  
+  reverse_option <- switch(input$indicador,
+                           "inflacion" = TRUE,
+                           FALSE
+  )
+
+  # Usamos el valor del slider input$nbins directamente
+  bins_domain <- safe_bins_domain(datos_mapa$VALOR, nbins = input$nbins)
+  pal <- colorBin(
+    palette = palette_name,
+    domain = bins_domain$domain,
+    bins = bins_domain$bins,
+    na.color = "#cccccc",
+    reverse = reverse_option
+  )
+
+  # --- CREACIÓN DINÁMICA DEL CONTENIDO DEL POPUP ---
+  # Se crea el contenido del popup dependiendo del indicador seleccionado
+  popup_content <- switch(
+    input$indicador,
+    "inflacion" = sprintf(
+      "<b>%s</b><br/>Periodo: %s<br/>Rzegión: %s<br/>Inflación regional: <b>%s</b><br/>Proporción regional: %s<br/>Contribución a inflación país: <b>%s</b>",
+      datos_mapa$DEPARTAMENTO_MAP, format(datos_mapa$fecha_sel, "%Y-%m"), ifelse(is.na(datos_mapa$Region), "s/d", datos_mapa$Region),
+      fmt_pct(datos_mapa$Inflacion_Regional),
+      ifelse(is.finite(datos_mapa$Proporcion_Regional), scales::percent(datos_mapa$Proporcion_Regional, accuracy = 0.01), "s/d"),
+      fmt_pct(datos_mapa$VALOR)
+    ),
+    "recaud_pc" = sprintf(
+      "<b>%s</b> (Año %d)<br/>Recaudación Total per cápita: <b>%s</b><br/>Recaudación IVA per cápita: %s<br/>--- Proporción de la recaudación total ---<br/>ISR: %s<br/>IVA: %s<br/>Otros: %s",
+      datos_mapa$DEPARTAMENTO_MAP, datos_mapa$anio_sel, fmt_q(datos_mapa$VALOR),
+      fmt_q(datos_mapa$Recaudacion_Per_Capita_IVA),
+      fmt_prop(datos_mapa$Proporcion_ISR),
+      fmt_prop(datos_mapa$Proporcion_IVA),
+      fmt_prop(datos_mapa$Proporcion_Otros_Impuestos)
+    ),
+    "cobertura_igss" = sprintf(
+      "<b>%s</b> (Año %d)<br/>Tasa de Cobertura IGSS: <b>%s</b><br/>Afiliados IGSS: %s<br/>Población Ocupada (Estimada): %s", 
+      datos_mapa$DEPARTAMENTO_MAP, datos_mapa$anio_sel,
+      fmt_pct_igss(datos_mapa$VALOR),
+      format(datos_mapa$Numero_Afiliados, big.mark = ",", scientific = FALSE),
+      format(datos_mapa$Poblacion_Ocupada, big.mark = ",", scientific = FALSE)
+    ),
+    "analfabetismo" = sprintf(
+      "<b>%s</b> (Año %d)<br/>Tasa de Analfabetismo: <b>%s</b><br/>Población (Estimada ENCOVI %d): %s",
+      datos_mapa$DEPARTAMENTO_MAP, datos_mapa$anio_sel,
+      fmt_pct_analfabetismo(datos_mapa$VALOR),
+      datos_mapa$anio_sel, 
+      format(datos_mapa$Poblacion_2023, big.mark = ",", scientific = FALSE)
+    ),
+    "desempleo" = sprintf(
+      "<b>%s</b> (Año %d)<br/>Personas Desempleadas (Abs.): <b>%s</b><br/>Tasa de Desempleo: %s",
+      datos_mapa$DEPARTAMENTO_MAP, datos_mapa$anio_sel,
+      fmt_abs(datos_mapa$VALOR),
+      fmt_pct_desempleo(datos_mapa$Tasa_Desempleo)
+    ),
+    # Opción por defecto por si no coincide ningún indicador
+    sprintf("<strong>%s</strong><br/>Valor: %s", datos_mapa$DEPARTAMENTO_MAP, datos_mapa$LABEL_VAL)
+  ) %>% lapply(htmltools::HTML)
+
+  # Usamos leafletProxy para actualizar el mapa existente
+  leafletProxy("mapa", data = datos_mapa) %>%
+    clearShapes() %>%
+    clearControls() %>%
+    addPolygons(
+      fillColor = ~pal(VALOR),
+      color   = "#444",
+      weight    = 1,
+      fillOpacity = 0.87,
+      opacity   = 1,
+      popup     = popup_content,
+      label     = ~DEPARTAMENTO_MAP,
+      highlight = highlightOptions(
+        weight = 2, 
+        color = "#000", 
+        fillOpacity = 0.95, 
+        bringToFront = TRUE
+      )
+    ) %>%
+    addLegend(
+      "bottomright", 
+      pal = pal, 
+      values = ~VALOR,
+      title = nombre_indicador,
+      opacity = 0.95
+    )
+})
+```
+
+

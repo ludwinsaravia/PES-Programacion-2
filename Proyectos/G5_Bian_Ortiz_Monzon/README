@@ -1,0 +1,29 @@
+# README
+
+PES-II-2025
+
+Automatización del IPC a través del IPC_bot
+
+Integrantes: Brian Bian Salazar, Fernando Ortíz Peláez, José Carlos Monzón
+
+# INTRODUCCIÓN
+
+El siguiente proyecto busca generar un reporte automatizado sobre los principales resultados de la inflación de Guatemala 
+a través de los informes mensuales que publica el Instituto Nacional de Estadística -INE- en formato Excel. Mediante el uso 
+del software estadístico R y diversas librerías para el manejo de información, fue posible generar un código que permite 
+hacer uso eficiente del tiempo y revelar datos descriptivos de forma pronta y precisa. 
+
+# ESTRUCTURA
+
+- Compilación de datos
+- Transformación y limpieza de datos
+- Cálculo de variaciones
+- Generación de gráficos
+- Presentación de resultados
+
+# CONCLUSIONES
+
+Los reportes automatizados generados permiten llevar un registro preciso de la información histórica y es posible ser consultado
+en cualquier momento. La elaboración del código conlleva un esfuerzo adicional que es compensado con la reducción de tiempo
+invertido en procesos rutinarios y descriptivos. El presente proyecto servirá como ejemplo de los procesos que son posible automatizar
+para destinar más tiempo y recursos en las desiciones críticas.

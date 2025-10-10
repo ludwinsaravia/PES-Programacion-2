@@ -1,0 +1,517 @@
+---
+title: "Reporte de Inflación  IPC Guatemala"
+author: "Fernando Ortíz, Brian Bian, José Monzón"
+format: 
+    revealjs:
+        theme: white
+        smaller: true
+        slide-number: true
+        logo: "./LogoBanguat_2025.JPG"
+        css: styles.css
+params:
+  año: 2025
+  mes: 9
+  region: "Region_VII"
+execute:
+  warning: false
+  message: false
+---
+
+```{r setup, include=FALSE}
+#| echo: false
+knitr::opts_chunk$set(
+  echo = FALSE, 
+  warning = FALSE, 
+  message = FALSE, 
+  fig.width = 10, 
+  fig.height = 6,
+  dev = "png",
+  dev.args = list(bg = "transparent")
+)
+
+# Cargar librerías
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(stringr)
+library(lubridate)
+library(glue)
+library(scales)
+library(rjson)
+library(ggplot2)
+library(maps)
+library(sf)
+library(dplyr)
+library(readxl)
+library(dplyr)
+library(tidyr)
+
+# Cargar funciones
+source("funciones_IPC.R")
+
+# Procesar datos
+datos_IPC <- procesar_datos_IPC(
+  "Datos_IPC_2024.xls",
+  "Datos_IPC_2025.xls", 
+"PONDERACIONES.xlsx"
+)
+
+# Configurar mes objetivo
+mes_obj <- as.Date(paste(params$año, params$mes, "01", sep = "-"))
+
+# Obtener datos para el reporte NACIONAL
+resultados_nacional <- obtener_top_incidencias(datos_IPC, mes_obj, "Republica")
+metricas_nacional <- calcular_metricas_resumen(datos_IPC, mes_obj, "Republica")
+
+# Obtener datos para el reporte REGIONAL (según parámetro)
+resultados_regional <- obtener_top_incidencias(datos_IPC, mes_obj, params$region)
+metricas_regional <- calcular_metricas_resumen(datos_IPC, mes_obj, params$region)
+
+# Nombres de regiones para títulos
+nombres_regiones <- c(
+  "Republica" = "Nacional",
+  "Region_I" = "Región I",
+  "Region_II" = "Región II", 
+  "Region_III" = "Región III",
+  "Region_IV" = "Región IV",
+  "Region_V" = "Región V",
+  "Region_VI" = "Región VI",
+  "Region_VII" = "Región VII",
+  "Region_VIII" = "Región VIII"
+)
+
+titulo_region <- nombres_regiones[[params$region]]
+
+# Variables para texto
+mes_titulo <- format(mes_obj, "%B %Y") %>% str_to_title()
+fecha_generado <- format(Sys.Date(), "%d/%m/%Y")
+
+# Nacional
+inflacion_nacional <- round(metricas_nacional$inflacion_total, 2)
+division_nacional <- metricas_nacional$division_mayor_incidencia
+valor_division_nacional <- round(metricas_nacional$valor_division_mayor, 2)
+
+# Regional  
+inflacion_regional <- round(metricas_regional$inflacion_total, 2)
+division_regional <- metricas_regional$division_mayor_incidencia
+valor_division_regional <- round(metricas_regional$valor_division_mayor, 2)
+
+# Manejar casos donde no hay datos
+if(nrow(resultados_nacional$top_pos_prod) > 0) {
+  producto_pos_nacional <- resultados_nacional$top_pos_prod$Descripcion[1]
+  valor_pos_nacional <- round(resultados_nacional$top_pos_prod$valor[1], 2)
+} else {
+  producto_pos_nacional <- "No disponible"
+  valor_pos_nacional <- 0
+}
+
+if(nrow(resultados_nacional$top_neg_prod) > 0) {
+  producto_neg_nacional <- resultados_nacional$top_neg_prod$Descripcion[1]
+  valor_neg_nacional <- round(resultados_nacional$top_neg_prod$valor[1], 2)
+} else {
+  producto_neg_nacional <- "No disponible"
+  valor_neg_nacional <- 0
+}
+
+if(nrow(resultados_regional$top_pos_prod) > 0) {
+  producto_pos_regional <- resultados_regional$top_pos_prod$Descripcion[1]
+  valor_pos_regional <- round(resultados_regional$top_pos_prod$valor[1], 2)
+} else {
+  producto_pos_regional <- "No disponible"
+  valor_pos_regional <- 0
+}
+
+if(nrow(resultados_regional$top_neg_prod) > 0) {
+  producto_neg_regional <- resultados_regional$top_neg_prod$Descripcion[1]
+  valor_neg_regional <- round(resultados_regional$top_neg_prod$valor[1], 2)
+} else {
+  producto_neg_regional <- "No disponible"
+  valor_neg_regional <- 0
+}
+```
+
+## `r mes_titulo` {.slide}
+
+**Ámbito:** `r titulo_region`
+
+**Generado:** `r fecha_generado`
+
+## Resumen Nacional {.slide}
+
+### Resultados
+
+**Inflación General:** `r inflacion_nacional` p.p.
+
+**División con Mayor Incidencia:** `r division_nacional` (`r valor_division_nacional` p.p.)
+
+**Producto con Mayor Impacto Positivo:** `r producto_pos_nacional` (`r valor_pos_nacional` p.p.)
+
+**Producto con Mayor Impacto Negativo:** `r producto_neg_nacional` (`r valor_neg_nacional` p.p.)
+
+## Resumen Regional {.slide}
+
+### Resultados `r titulo_region`
+
+**Inflación General:** `r inflacion_regional` p.p.
+
+**División con Mayor Incidencia:** `r division_regional` (`r valor_division_regional` p.p.)
+
+**Producto con Mayor Impacto Positivo:** `r producto_pos_regional` (`r valor_pos_regional` p.p.)
+
+**Producto con Mayor Impacto Negativo:** `r producto_neg_regional` (`r valor_neg_regional` p.p.)
+
+## Incidencia por División de Gasto - Nacional {.slide}
+
+```{r}
+#| echo: false
+if(nrow(resultados_nacional$divisiones_orden) > 0) {
+  ggplot(resultados_nacional$divisiones_orden %>% 
+           mutate(Descripcion = str_wrap(Descripcion, 35)), 
+         aes(x = reorder(Descripcion, valor), y = valor)) +
+    geom_col(fill = "#213830") +
+    coord_flip() +
+    labs(
+      title = "Inflación General - Nacional",
+      subtitle = paste("Incidencia por división de gasto -", mes_titulo),
+      x = NULL, 
+      y = "Incidencia (p.p.)"
+    ) +
+    theme_minimal() +
+    theme(
+        plot.title = element_text(face = "bold", size = 16),
+        plot.subtitle = element_text(size = 14),
+        panel.background = element_rect(fill = "transparent", color = NA),
+        plot.background = element_rect(fill = "transparent", color = NA)
+    )
+} else {
+  ggplot() +
+    annotate("text", x = 1, y = 1, label = "No hay datos disponibles", size = 6) +
+    theme_void()
+}
+```
+
+## Top 10 Incidencias Positivas por Producto - Nacional {.slide}
+
+```{r}
+#| echo: false
+if(nrow(resultados_nacional$top_pos_prod) > 0) {
+  resultados_nacional$top_pos_prod %>% 
+    mutate(
+      Descripcion = str_wrap(Descripcion, 40),
+      intensidad = valor
+    ) %>%
+    ggplot(aes(x = reorder(Descripcion, valor), y = valor)) +
+    geom_col(aes(fill = intensidad)) +
+    coord_flip() +
+    labs(
+      title = "Inflación General - Nacional",
+      subtitle = paste("Top 10 Incidencias Positivas -", mes_titulo),
+      x = NULL, 
+      y = "Incidencia (p.p.)"
+    ) +
+    scale_fill_gradientn(
+      colors = c("#FAD2D2", "#e6654e", "#781f0e")
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(face = "bold", size = 16),
+      plot.subtitle = element_text(size = 14),
+      legend.position = "none",
+      axis.text = element_text(size = 10)
+    )
+} else {
+  # Gráfico vacío si no hay datos
+  ggplot() +
+    annotate("text", x = 1, y = 1, label = "No hay datos disponibles", size = 6) +
+    theme_void()
+}
+```
+
+## Top 10 Incidencias Negativas por Producto - Nacional {.slide}
+
+```{r}
+#| echo: false
+if(nrow(resultados_nacional$top_neg_prod) > 0) {
+  resultados_nacional$top_neg_prod %>%
+    mutate(
+      Descripcion = str_wrap(Descripcion, 40),
+      intensidad = -valor
+    ) %>%
+    ggplot(aes(x = reorder(Descripcion, valor, decreasing = TRUE), y = valor)) +
+    geom_col(aes(fill = intensidad)) +
+    coord_flip() +
+    labs(
+      title = "Inflación General - Nacional",
+      subtitle = paste("Top 10 Incidencias Negativas -", mes_titulo),
+      x = NULL, 
+      y = "Incidencia (p.p.)"
+    ) +
+    scale_fill_gradientn(
+      colors = c("#f5d47a", "#d8ae41", "#c4922b")
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(face = "bold", size = 16),
+      plot.subtitle = element_text(size = 14),
+      legend.position = "none",
+      axis.text = element_text(size = 10)
+    )
+} else {
+  # Gráfico vacío si no hay datos
+  ggplot() +
+    annotate("text", x = 1, y = 1, label = "No hay datos disponibles", size = 6) +
+    theme_void()
+}
+```
+
+## Inflación por Regiones {.slide}
+
+```{r}
+## cargar mapa de Guatemala por regiones
+
+guatemala_regiones <- read_sf("mapa_base_regiones_administrativas.json") %>% 
+    st_set_crs(32616)
+
+belice <- read_sf("mapa_base_belice.json") %>% 
+    st_set_crs(32616)
+
+guatemala_lagos <- read_sf("hidrografia_lagos.json") %>% 
+    st_set_crs(32616)
+
+# Crear la inflación por regiones a partir de la información publicada
+
+tipos_col = c("numeric", "text", "numeric", "numeric", "numeric", 
+              "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")
+
+indices_regiones <- read_excel("inflacion_regiones.xlsx", col_types = tipos_col)
+
+variaciones_interanuales <- indices_regiones %>%
+    # Crear número de mes y ordenar
+    mutate(Mes_num = match(Mes, month.name)) %>%
+    arrange(Año, Mes_num) %>%
+    # Calcular variación interanual SIN agrupar
+    mutate(across(c(Republica, Region_I, Region_II, Region_III, Region_IV, 
+                    Region_V, Region_VI, Region_VII, Region_VIII),
+                  ~ round(((.x / lag(.x, n = 12) - 1) * 100), digits = 2),
+                  .names = "Var_{.col}")) %>%
+    
+    select(Año, Mes, starts_with("Var_")) %>% 
+    filter(Año >= 2002)
+
+# Crear mapa con la información de inflación por año y mes
+
+mapeo_regiones <- data.frame(
+    nom_reg = c("METROPOLITANA -I-", "NORTE -II-", "NORORIENTE -III-", 
+                "SURORIENTE -IV-", "CENTRAL -V-", "SUROCCIDENTE -VI-", 
+                "NOROCCIDENTE -VII-", "PETÉN -VIII-"),
+    region_var = c("Region_I", "Region_II", "Region_III", "Region_IV",
+                   "Region_V", "Region_VI", "Region_VII", "Region_VIII")
+)
+    
+# Función para generar el mapa según año y mes
+generar_mapa_inflacion <- function(anio, mes) {
+    
+    # Filtrar datos para el año y mes específicos
+    datos_filtrados <- variaciones_interanuales %>%
+        filter(Año == anio, Mes == mes)
+    
+    if (nrow(datos_filtrados) == 0) {
+        stop("No hay datos para el año y mes seleccionados")
+    }
+    
+    # Convertir a formato largo para hacer el join
+    datos_largo <- datos_filtrados %>%
+        pivot_longer(
+            cols = starts_with("Var_"),
+            names_to = "region_var",
+            values_to = "inflacion"
+        ) %>%
+        mutate(region_var = gsub("Var_", "", region_var))
+    
+    # Unir con el mapeo de regiones
+    datos_mapa <- datos_largo %>%
+        left_join(mapeo_regiones, by = "region_var")
+    
+    # Unir con el shapefile
+    mapa_completo <- guatemala_regiones %>%
+        left_join(datos_mapa, by = "nom_reg")
+    
+    # Obtener inflación de la República para el título
+    inflacion_republica <- datos_filtrados$Var_Republica[1]
+    
+    # Calcular rango simétrico automático
+    rango_max <- max(abs(mapa_completo$inflacion), na.rm = TRUE)
+    limite_superior <- ceiling(rango_max)
+    limite_inferior <- -limite_superior
+    
+    centroides <- mapa_completo %>%
+        st_centroid() %>%
+        st_coordinates() %>%
+        as.data.frame() %>%
+        bind_cols(nom_reg = mapa_completo$nom_reg, 
+                  inflacion = mapa_completo$inflacion)
+    
+    # Crear el mapa
+    ggplot(mapa_completo) +
+        geom_sf(aes(fill = inflacion), color = "black", size = 0.3) +
+        geom_sf(data = guatemala_lagos,
+                fill = "skyblue", color = "gray50", size = 0.15, alpha = 0.5) +
+        geom_sf(data = belice,
+                fill = NA, color = "gray50", size = 0.15, alpha = 0.5) +
+        geom_text(data = centroides, 
+                  aes(x = X, y = Y, 
+                      label = paste0(
+                          case_when(
+                              nom_reg == "METROPOLITANA -I-" ~ "I",
+                              nom_reg == "NORTE -II-" ~ "II",
+                              nom_reg == "NORORIENTE -III-" ~ "III",
+                              nom_reg == "SURORIENTE -IV-" ~ "IV",
+                              nom_reg == "CENTRAL -V-" ~ "V",
+                              nom_reg == "SUROCCIDENTE -VI-" ~ "VI",
+                              nom_reg == "NOROCCIDENTE -VII-" ~ "VII",
+                              nom_reg == "PETÉN -VIII-" ~ "VIII"
+                          ), 
+                          "\n", 
+                          format(round(inflacion, 1),1))),
+                  color = "black", size = 3, fontface = "bold",
+                  lineheight = 0.8) +
+        scale_fill_gradient2(
+            low = "#c4922b",
+            mid = "white",
+            high = "#781f0e",
+            midpoint = 0,
+            name = "Inflación (%)",
+            limits = c(limite_inferior, limite_superior),
+            labels = function(x) sprintf("%.1f", x)
+        ) +
+        theme_void() +
+        labs(
+            title = paste("Inflación por Región -", mes, anio),
+            subtitle = paste("República:", inflacion_republica, "%")
+        ) +
+        theme(
+            plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+            plot.subtitle = element_text(hjust = 0.5, size = 14, color = "darkblue"),
+            legend.position = "left",
+            plot.caption = element_text(hjust = 0)
+        )
+}
+
+# Ejemplo de uso
+generar_mapa_inflacion(params$año, format(mes_obj, "%B") %>% str_to_title())
+
+```
+
+## Incidencia por División de Gasto - `r titulo_region` {.slide}
+
+```{r}
+#| echo: false
+if(nrow(resultados_regional$divisiones_orden) > 0) {
+  ggplot(resultados_regional$divisiones_orden %>% 
+           mutate(Descripcion = str_wrap(Descripcion, 35)), 
+         aes(x = reorder(Descripcion, valor), y = valor)) +
+    geom_col(fill = "#2a5446") +
+    coord_flip() +
+    labs(
+      title = glue("Inflación General - {titulo_region}"),
+      subtitle = paste("Incidencia por división de gasto -", mes_titulo),
+      x = NULL, 
+      y = "Incidencia (p.p.)"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(face = "bold", size = 16),
+      plot.subtitle = element_text(size = 14)
+    )
+} else {
+  ggplot() +
+    annotate("text", x = 1, y = 1, label = "No hay datos disponibles", size = 6) +
+    theme_void()
+}
+```
+
+## Top 10 Incidencias Positivas por Producto - `r titulo_region` {.slide}
+
+```{r}
+#| echo: false
+if(nrow(resultados_regional$top_pos_prod) > 0) {
+  resultados_regional$top_pos_prod %>% 
+    mutate(Descripcion = str_wrap(Descripcion, 40)) %>% 
+    ggplot(aes(x = reorder(Descripcion, valor),
+               y = valor,
+               fill = valor)) +
+    geom_col() +
+    coord_flip() +
+    labs(
+      title = glue("Inflación General - {titulo_region}"),
+      subtitle = paste("Top 10 Incidencias Positivas por Producto -", mes_titulo),
+      x = NULL, 
+      y = "Incidencia (p.p.)", 
+      fill = NULL
+    ) +
+    scale_fill_gradientn(
+      colors = c("#FAD2D2", "#e6654e", "#781f0e"),
+      trans = "sqrt"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(face = "bold", size = 16),
+      plot.subtitle = element_text(size = 14),
+      legend.position = "none"
+    )
+} else {
+  ggplot() +
+    annotate("text", x = 1, y = 1, label = "No hay datos disponibles", size = 6) +
+    theme_void()
+}
+```
+
+## Top 10 Incidencias Negativas por Producto - `r titulo_region` {.slide}
+
+```{r}
+#| echo: false
+if(nrow(resultados_regional$top_neg_prod) > 0) {
+  resultados_regional$top_neg_prod %>%
+    mutate(
+      Descripcion = str_wrap(Descripcion, 40),
+      intensidad = -valor
+    ) %>%
+    ggplot(aes(x = reorder(Descripcion, valor, decreasing = TRUE),
+               y = valor,
+               fill = intensidad)) +
+    geom_col() +
+    coord_flip() +
+    labs(
+      title = glue("Inflación General - {titulo_region}"),
+      subtitle = paste("Top 10 Incidencias Negativas por Producto -", mes_titulo),
+      x = NULL, 
+      y = "Incidencia (p.p.)", 
+      fill = NULL
+    ) +
+    scale_fill_gradientn(
+      colors = c("#f5d47a", "#d8ae41", "#c4922b"),
+      trans = "sqrt"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(face = "bold", size = 16),
+      plot.subtitle = element_text(size = 14),
+      legend.position = "none"
+    )
+} else {
+  ggplot() +
+    annotate("text", x = 1, y = 1, label = "No hay datos disponibles", size = 6) +
+    theme_void()
+}
+
+```
+
+## Detalle Técnico {.slide}
+
+**Período analizado:** `r mes_titulo`
+
+**Región:** `r titulo_region`
+
+**Total de productos analizados:** `r nrow(datos_IPC %>% filter(Tipo == "Producto", fecha == mes_obj))`
+
+**Metodología:** Variación interanual del IPC

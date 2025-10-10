@@ -1,0 +1,16 @@
+# README
+
+PES-II-2025
+
+# Descripción
+## **Título del proyecto:**
+Visualización con Shiny de indicadores de comercio exterior y economía internacional de Guatemala
+
+## **Objetivo:**
+Generar un dashboard interactivo y dinámico, desarrollado en Shiny, que permita visualizar y analizar los indicadores de comercio exterior y economía internacional para el caso de Guatemala, con datos de organismos internacionales
+
+## **Input: 
+Data sets obtenidos a través de APIs de UN Comtrade (United Nations Commodity Trade): base con estadísticas globales sobre comercio, por producto y socio comercial. Contiene estadísticas sobre importaciones y exportaciones, reportadas por autoridades estadísticas de aproximadamente 200 países.
+
+## **Output:**
+Dashboard generado con Shiny y librerías auxiliares (bslib, ggplot2, entre otros), organizado en paneles temáticos de comercio exterior y economía internacional. El usuario interactúa mediante widgets, y el sistema actualiza visualizaciones al reaccionar a las entradas del usuario.

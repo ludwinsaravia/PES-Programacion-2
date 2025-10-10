@@ -1,0 +1,342 @@
+---
+title: "Proyecto Grupal: Análisis del rating ELO de Hikaru Nakamura"
+author: "Marcos Juarez, Jose De Leon, Jorge Avalos"
+date: "2025-10-07"
+format:
+  revealjs:
+    theme: simple
+    transition: fade
+    slide-number: true
+execute:
+  echo: true
+---
+
+# Carga de los datos de Hikaru Nakamura.
+
+```{r setup, include = FALSE}
+# Configuración del entorno
+rm(list = ls())
+graphics.off()
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+cat("\014")
+setwd("C:/Users/IN_CAP02/Documents/R programacion II/Proyecto grupal")
+```
+
+```{r}
+library(dplyr)
+
+elo_hikaru <- read.csv("rating_hikaru.csv")
+elo_hikaru <- elo_hikaru %>% filter(timeClass == "blitz")
+```
+
+------------------------------------------------------------------------
+
+# Modelo de filtro de Kalman de media local.
+
+------------------------------------------------------------------------
+
+## Ecuaciones del modelo.
+
+$$ y_t = \mu_t + \varepsilon_t, \;\varepsilon_t \sim \mathcal{N} \left(0, \sigma^2_{\varepsilon} \right) $$ $$ \mu_t = \mu_{t-1} + \eta_{t}, \; \eta_{t} \sim \mathcal{N} \left(0, \sigma^2_{\eta} \right)$$
+
+------------------------------------------------------------------------
+
+## Suavizado con ajuste de parámetros.
+
+```{r}
+library(KFAS)
+library(stats)
+
+y <- elo_hikaru$userRating
+n <- length(y)
+
+modelo <- SSModel(y ~ SSMtrend(degree = 1, Q = list(NA)), H = NA)
+ajuste <- fitSSM(modelo, inits = c(log(var(y, na.rm = TRUE)), log(var(y, na.rm = TRUE))/100), method = "BFGS")
+suavizado <- KFS(ajuste$model, smoothing = "state")
+rating_suavizado <- as.numeric(suavizado$alphahat[, 1])
+rating_suavizado_sd <- sqrt(suavizado$V[1, 1, ])
+```
+
+------------------------------------------------------------------------
+
+## Resultado gráfico general.
+
+```{r, echo = FALSE}
+library(ggplot2)
+
+df <- data.frame(
+  Tiempo = (1:n),
+  Observado = y,
+  Suavizado = rating_suavizado,
+  SD = rating_suavizado_sd
+)
+
+ggplot(df, aes(x = Tiempo)) +
+  geom_line(aes(y = Observado, color = "Observado"), linewidth = 1.1, na.rm = TRUE) +
+  geom_ribbon(aes(ymin = Suavizado - 2 * SD, ymax = Suavizado + 2 * SD),
+              fill = "steelblue", alpha = 0.2) +
+  geom_line(aes(y = Suavizado, color = "Kalman suavizado"), linewidth = 1.2) +
+  labs(
+    title = "Filtro y suavizado de Kalman (modelo de nivel local)",
+    x = "Número de partida",
+    y = "Rating estimado",
+    color = "Serie"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "top")
+```
+
+------------------------------------------------------------------------
+
+## Resultado gráfico últimos 100 datos.
+
+```{r, echo = FALSE}
+
+df <- data.frame(
+  Tiempo = (1:n)[42920:43019],
+  Observado = y[42920:43019],
+  Suavizado = rating_suavizado[42920:43019],
+  SD = rating_suavizado_sd[42920:43019]
+)
+
+ggplot(df, aes(x = Tiempo)) +
+  geom_line(aes(y = Observado, color = "Observado"), linewidth = 1.1, na.rm = TRUE) +
+  geom_ribbon(aes(ymin = Suavizado - 2 * SD, ymax = Suavizado + 2 * SD),
+              fill = "steelblue", alpha = 0.2) +
+  geom_line(aes(y = Suavizado, color = "Kalman suavizado"), linewidth = 1.2) +
+  labs(
+    title = "Filtro y suavizado de Kalman (modelo de nivel local)",
+    x = "Número de partida",
+    y = "Rating estimado",
+    color = "Serie"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "top")
+```
+
+------------------------------------------------------------------------
+
+## Suavizado con parámetros estimados.
+
+```{r}
+H_fix <- 0.5 * var(diff(y), na.rm = TRUE)
+# Se supone que el cambio de ~500 puntos de ELO es el resultado de la suma de 40000 variables normales.
+# Por tanto 500^2 = 40000*sigma^2
+Q_fix <- 6.25
+
+modelo <- SSModel(y ~ SSMtrend(degree = 1, Q = list(Q_fix)), H = H_fix)
+suavizado <- KFS(modelo, smoothing = "state")
+rating_suavizado <- as.numeric(suavizado$alphahat[, 1])
+rating_suavizado_sd <- sqrt(suavizado$V[1, 1, ])
+```
+
+------------------------------------------------------------------------
+
+## Resultado gráfico general.
+
+```{r, echo = FALSE}
+df <- data.frame(
+  Tiempo = (1:n),
+  Observado = y,
+  Suavizado = rating_suavizado,
+  SD = rating_suavizado_sd
+)
+
+ggplot(df, aes(x = Tiempo)) +
+  geom_line(aes(y = Observado, color = "Observado"), linewidth = 1.1, na.rm = TRUE) +
+  geom_ribbon(aes(ymin = Suavizado - 2 * SD, ymax = Suavizado + 2 * SD),
+              fill = "steelblue", alpha = 0.2) +
+  geom_line(aes(y = Suavizado, color = "Kalman suavizado"), linewidth = 1.2) +
+  labs(
+    title = "Filtro y suavizado de Kalman (modelo de nivel local)",
+    x = "Número de partida",
+    y = "Rating estimado",
+    color = "Serie"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "top")
+```
+
+------------------------------------------------------------------------
+
+## Resultado gráfico últimos 100 datos.
+
+```{r, echo = FALSE}
+
+df <- data.frame(
+  Tiempo = (1:n)[42920:43019],
+  Observado = y[42920:43019],
+  Suavizado = rating_suavizado[42920:43019],
+  SD = rating_suavizado_sd[42920:43019]
+)
+
+ggplot(df, aes(x = Tiempo)) +
+  geom_line(aes(y = Observado, color = "Observado"), linewidth = 1.1, na.rm = TRUE) +
+  geom_ribbon(aes(ymin = Suavizado - 2 * SD, ymax = Suavizado + 2 * SD),
+              fill = "steelblue", alpha = 0.2) +
+  geom_line(aes(y = Suavizado, color = "Kalman suavizado"), linewidth = 1.2) +
+  labs(
+    title = "Filtro y suavizado de Kalman (modelo de nivel local)",
+    x = "Número de partida",
+    y = "Rating estimado",
+    color = "Serie"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "top")
+```
+
+------------------------------------------------------------------------
+
+# Modelo de filtro de Kalman de tendencia local.
+
+------------------------------------------------------------------------
+
+## Ecuaciones del modelo.
+
+$$ y_t = \mu_t + \varepsilon_t, \;\varepsilon_t \sim \mathcal{N} \left(0, \sigma^2_{\varepsilon} \right) $$ $$ \mu_t = \mu_{t-1} + \beta_{t-1} + \eta_{1_t}, \; \eta_{1_t} \sim \mathcal{N} \left(0, \sigma^2_{\eta_1} \right)$$ $$ \beta_t = \beta_{t-1} + \eta_{2_t}, \; \eta_{2_t} \sim \mathcal{N} \left(0, \sigma^2_{\eta_2} \right)$$
+
+------------------------------------------------------------------------
+
+## Suavizado con ajuste de parámetros.
+
+```{r}
+modelo <- SSModel(y ~ SSMtrend(degree = 2, Q = list(NA,NA)), H = NA)
+ajuste <- fitSSM(modelo, inits = c(log(var(y, na.rm = TRUE)), log(var(y, na.rm = TRUE)/100), log(var(y, na.rm = TRUE))/10000), method = "BFGS")
+suavizado <- KFS(ajuste$model, smoothing = "state")
+rating_suavizado <- as.numeric(suavizado$alphahat[, 1])
+rating_suavizado_sd <- sqrt(suavizado$V[1, 1, ])
+```
+
+------------------------------------------------------------------------
+
+## Resultado gráfico general.
+
+```{r, echo = FALSE}
+df <- data.frame(
+  Tiempo = (1:n),
+  Observado = y,
+  Suavizado = rating_suavizado,
+  SD = rating_suavizado_sd
+)
+
+ggplot(df, aes(x = Tiempo)) +
+  geom_line(aes(y = Observado, color = "Observado"), linewidth = 1.1, na.rm = TRUE) +
+  geom_ribbon(aes(ymin = Suavizado - 2 * SD, ymax = Suavizado + 2 * SD),
+              fill = "steelblue", alpha = 0.2) +
+  geom_line(aes(y = Suavizado, color = "Kalman suavizado"), linewidth = 1.2) +
+  labs(
+    title = "Filtro y suavizado de Kalman (modelo de tendencia local)",
+    x = "Número de partida",
+    y = "Rating estimado",
+    color = "Serie"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "top")
+```
+
+------------------------------------------------------------------------
+
+## Resultado gráfico últimos 100 datos.
+
+```{r, echo = FALSE}
+
+df <- data.frame(
+  Tiempo = (1:n)[42920:43019],
+  Observado = y[42920:43019],
+  Suavizado = rating_suavizado[42920:43019],
+  SD = rating_suavizado_sd[42920:43019]
+)
+
+ggplot(df, aes(x = Tiempo)) +
+  geom_line(aes(y = Observado, color = "Observado"), linewidth = 1.1, na.rm = TRUE) +
+  geom_ribbon(aes(ymin = Suavizado - 2 * SD, ymax = Suavizado + 2 * SD),
+              fill = "steelblue", alpha = 0.2) +
+  geom_line(aes(y = Suavizado, color = "Kalman suavizado"), linewidth = 1.2) +
+  labs(
+    title = "Filtro y suavizado de Kalman (modelo de tendencia local)",
+    x = "Número de partida",
+    y = "Rating estimado",
+    color = "Serie"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "top")
+```
+
+------------------------------------------------------------------------
+
+# Modelo de filtro de Kalman de media local eliminando las autocorrelaciones.
+
+------------------------------------------------------------------------
+
+## Suavizado con ajuste de parámetros.
+
+```{r}
+n_eliminacion <- 100
+y_decorrelado <- rep(NA, n)
+for (i in seq(1,n)){
+  if (i %% n_eliminacion == 1){
+    y_decorrelado[i] <- y[i]
+  }
+}
+
+modelo <- SSModel(y_decorrelado ~ SSMtrend(degree = 1, Q = list(NA)), H = NA)
+ajuste <- fitSSM(modelo, inits = c(log(var(y_decorrelado, na.rm = TRUE)), log(var(y_decorrelado, na.rm = TRUE))/100), method = "BFGS")
+suavizado <- KFS(ajuste$model, smoothing = "state")
+rating_suavizado <- as.numeric(suavizado$alphahat[, 1])
+rating_suavizado_sd <- sqrt(suavizado$V[1, 1, ])
+```
+
+------------------------------------------------------------------------
+
+## Resultado gráfico general.
+
+```{r, echo = FALSE}
+df <- data.frame(
+  Tiempo = (1:n),
+  Observado = y,
+  Suavizado = rating_suavizado,
+  SD = rating_suavizado_sd
+)
+
+ggplot(df, aes(x = Tiempo)) +
+  geom_line(aes(y = Observado, color = "Observado"), linewidth = 1.1, na.rm = TRUE) +
+  geom_ribbon(aes(ymin = Suavizado - 2 * SD, ymax = Suavizado + 2 * SD),
+              fill = "steelblue", alpha = 0.2) +
+  geom_line(aes(y = Suavizado, color = "Kalman suavizado"), linewidth = 1.2) +
+  labs(
+    title = "Filtro y suavizado de Kalman (modelo de nivel local)",
+    x = "Número de partida",
+    y = "Rating estimado",
+    color = "Serie"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "top")
+```
+
+------------------------------------------------------------------------
+
+## Resultado gráfico últimos 1000 datos.
+
+```{r, echo = FALSE}
+
+df <- data.frame(
+  Tiempo = (1:n)[42020:43019],
+  Observado = y[42020:43019],
+  Suavizado = rating_suavizado[42020:43019],
+  SD = rating_suavizado_sd[42020:43019]
+)
+
+ggplot(df, aes(x = Tiempo)) +
+  geom_line(aes(y = Observado, color = "Observado"), linewidth = 1.1, na.rm = TRUE) +
+  geom_ribbon(aes(ymin = Suavizado - 2 * SD, ymax = Suavizado + 2 * SD),
+              fill = "steelblue", alpha = 0.2) +
+  geom_line(aes(y = Suavizado, color = "Kalman suavizado"), linewidth = 1.2) +
+  labs(
+    title = "Filtro y suavizado de Kalman (modelo de nivel local)",
+    x = "Número de partida",
+    y = "Rating estimado",
+    color = "Serie"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "top")
+```
