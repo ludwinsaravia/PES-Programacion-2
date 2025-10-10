@@ -31,7 +31,7 @@ const n_t = 90
 
 # Esta función replica exactamente tu código original completo
 function frank_vs_mou()
-    n_p = 21
+    n_p = 11
     n_sim = 10000
     p_frank_vec = range(0, 1, length=n_p)
     prob_frank_gane = fill(NaN, n_p)

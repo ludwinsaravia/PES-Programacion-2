@@ -289,7 +289,7 @@ mi_tercera_funcion(1)
 
 # También tenemos a nuestra disposición funciones anónimas
 x -> x.^2			# Función anónima
-f_anonima = x -> x.^2	# Función anónima con nombre
+f_anonima = (x) -> x.^2	# Función anónima con nombre
 f_anonima(3)
 f_anonima([3.0,2.0])
 

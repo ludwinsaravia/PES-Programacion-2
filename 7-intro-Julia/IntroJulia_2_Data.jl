@@ -88,7 +88,7 @@ Base.MathConstants.golden
 # testear el código
 
 # Se permite underscore en nombres de variables. A diferencia de R, los puntos no están permitidos.
-numero_balones_oro_messi   = 8  # Actualizado a 2025 😉
+numero_balones_oro_messi   = 8  # Actualizado a 2025
 # numero.balones.oro.ronaldo = 5  # Esto causaría un error
 
 ### Crear vectores ###
@@ -332,7 +332,7 @@ using FredData, StatsPlots
 
 # Primero debemos crear una cuenta en FRED y solicitar "API Key"
 # Registrarse en: https://fred.stlouisfed.org/docs/api/api_key.html
-my_API_KEY = "774d3d91735228d35827d32e5c405dc8"  # Reemplaza con tu propia API key
+my_API_KEY = "APIKEY"  # Reemplaza con tu propia API key
 
 # La función Fred nos creará una conexión con el API de FRED
 f = Fred(my_API_KEY)

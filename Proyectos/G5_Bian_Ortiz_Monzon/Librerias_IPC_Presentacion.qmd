@@ -1,0 +1,231 @@
+---
+title: "Librerías utilizadas en el proyecto IPC Guatemala"
+author: "Brian Bian, Fernando Ortiz, José Monzón"
+subtitle: "Programación II"
+format: 
+  revealjs:
+    theme: simple
+    transition: fade
+    slide-number: true
+    logo: "LogoBanguat_2025.JPG"
+    css: styles.css
+    smaller: true
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+## 🧩 Introducción {.center}
+
+El análisis del **Índice de Precios al Consumidor (IPC)** utiliza diversas librerías del ecosistema **tidyverse** y herramientas complementarias de R.  
+Estas permiten **leer, transformar, limpiar, visualizar y automatizar** el procesamiento de datos del IPC de Guatemala.
+
+---
+
+## ⚙️ Automatización del análisis del IPC {.center}
+
+El procesamiento tradicional del **Índice de Precios al Consumidor (IPC)** suele realizarse en hojas de cálculo (por ejemplo, *Excel*),  
+lo que implica:
+
+- ⏱️ **Mayor tiempo** en tareas repetitivas (copiar fórmulas, crear tablas y gráficos).  
+- ⚠️ **Riesgo de errores humanos** al modificar celdas o referencias.  
+- 📉 **Dificultad para actualizar datos** mes a mes.
+
+---
+
+### 💡 Ventajas de automatizar con RStudio
+
+Usar **RStudio** y el ecosistema **tidyverse** permite transformar este proceso en un flujo reproducible y confiable:
+
+| Beneficio | Descripción |
+|------------|--------------|
+| ⚡ **Eficiencia** | Los cálculos (variaciones, incidencias, gráficas) se generan automáticamente con una sola ejecución. |
+| 🧠 **Consistencia** | Las mismas fórmulas se aplican a todo el conjunto de datos sin riesgo de alterar celdas manualmente. |
+| 🔄 **Actualización rápida** | Basta con reemplazar los archivos del nuevo mes y volver a correr el script para obtener los reportes actualizados. |
+| 📊 **Automatización total** | Los reportes, tablas y mapas se pueden generar dinámicamente. |
+
+
+---
+
+## 📘 Lectura de datos {.center}
+
+| Librería | Propósito |
+|-----------|------------|
+| **readxl** | Permite importar archivos de Excel (`.xls`, `.xlsx`) directamente en R. |
+
+💡 *Uso principal:*  
+```r
+library(readxl)
+Datos_IPC_2025 <- read_excel("Datos_IPC_2025.xls")
+```
+
+
+---
+
+## 🧹 Manipulación y limpieza de datos {.center}
+
+
+| Librería | Propósito |
+|-----------|------------|
+| **dplyr** | Manipula datos de forma eficiente (`filter`, `mutate`, `summarise`, `left_join`). |
+
+🧩 *Ejemplo en el proyecto IPC:*
+```r
+IPC_interanual_p <- left_join(IPC_interanual,
+                              ponderaciones[,c("Codigo","Republica_peso","Region_I_peso","Region_II_peso","Region_III_peso",
+                                               "Region_IV_peso","Region_V_peso","Region_VI_peso","Region_VII_peso","Region_VIII_peso")],
+                              by = "Codigo")
+
+```
+
+## ✏️ Limpieza de texto y manejo de fechas {.center}
+
+
+| Librería | Propósito |
+|-----------|------------|
+| **stringr** | Se utiliza para estandarizar el texto de los nombres de meses mediante `str_to_lower()`. |
+| **lubridate** | Permite crear y manipular fechas a partir de las columnas de año y mes, utilizando funciones como `make_date()`. |
+
+## ✏️ Limpieza de texto y manejo de fechas {.center}
+
+🧩 *Ejemplo con `make_date()`:*
+```r
+# Mapeo de mes a número
+mes_map <- c("enero"=1, "febrero"=2, "marzo"=3, "abril"=4, "mayo"=5, "junio"=6,
+             "julio"=7, "agosto"=8, "septiembre"=9, "octubre"=10, "noviembre"=11, "diciembre"=12)
+
+IPC_aux <- IPC %>% # 3 nuevas columnas:
+    mutate( mes_minuscula  = str_to_lower(Mes), # Crea nueva columna con los meses en minúsculas
+            mes_numero     = mes_map[mes_minuscula], # Se asocia el nombre "enero" con el 1, tipo BUSCARV en Excel
+            fecha          = make_date(Año, mes_numero, 1) # fecha que empieza en el día 1 del mes x y el año z
+    )
+
+IPC_aux
+
+    Año      Mes      fecha
+1  2024    enero  2024-01-01
+2  2024  febrero  2024-02-01
+3  2024    marzo  2024-03-01
+```
+
+
+---
+
+## ⚙️ Texto dinámico y automatización {.center}
+
+La librería **`glue`** permite **insertar variables dentro de texto** de manera sencilla.
+
+
+| Librería | Propósito principal |
+|-----------|----------------------|
+| **glue** | Combina texto y variables en una sola cadena de forma dinámica y legible. |
+
+
+¿Por qué usar `glue`?
+
+- Hace más **legible** el código que genera texto o nombres automáticos.  
+- Evita el uso de `paste()` o `paste0()`, que son menos claros.  
+- Es ideal para reportes automáticos, rutas dinámicas y etiquetas personalizadas.
+
+---
+
+### 🧩 Ejemplo:
+
+```r
+library(glue)
+
+region_sel <- "Región VII"
+mes_sel <- "septiembre"
+año_sel <- 2025
+
+titulo_mapa <- glue("Inflación mensual - {region_sel}")
+subtitulo_mapa <- glue("{str_to_title(mes_sel)} de {año_sel}")
+
+ggplot(mapa_join) +
+  geom_sf(aes(fill = inflacion), color = "white") +
+  scale_fill_gradient(low = "#fee8c8", high = "#e34a33") +
+  labs(
+    title = titulo_mapa,
+    subtitle = subtitulo_mapa,
+    fill = "Inflación (%)"
+  ) +
+  theme_minimal()
+```
+| Método    | Código                                                              | Resultado                                            |
+| --------- | ------------------------------------------------------------------- | ---------------------------------------------------- |
+| `paste()` | `paste("Inflación mensual -", region, "(", mes, año, ")")`         | `"Inflación mensual - Región VII (septiembre 2025)"` |
+| `glue()`  | `glue("Inflación mensual - {region} ({str_to_title(mes)} {año})")` | `"Inflación mensual - Región VII (Septiembre 2025)"` |
+
+
+
+
+
+
+
+
+
+
+---
+
+## 🗺️ Librerías para visualización {.center}
+
+Estas librerías permiten **construir gráficos y mapas temáticos** para analizar la variación del IPC por regiones.
+
+| Librería | Propósito principal |
+|-----------|----------------------|
+| **ggplot2** | Crea los gráficos y mapas a partir de los datos (`geom_col`, `geom_line`, `geom_sf`). |
+| **sf** | Gestiona la información geográfica: lee, transforma y une mapas (archivos `.shp`, `.geojson`). |
+
+🌍 **¿Qué hace realmente `sf`?**
+
+`sf` (Simple Features) convierte los mapas —que normalmente vienen en archivos espaciales como `.shp`—  en **data frames geográficos**, donde cada fila representa una región o departamento, y una columna especial contiene la **geometría** (polígonos, líneas o puntos).
+
+
+---
+
+## 🗺️ Ejemplo: mapa de inflación regional {.center}
+
+La librería **`sf`** se utiliza para **leer, transformar y visualizar** datos espaciales.  
+
+🧩 *Ejemplo del código real del proyecto:*
+```r
+# 1️⃣ Leer el mapa base de Guatemala
+guatemala_regiones <- read_sf("mapa_base_regiones_administrativas.json") %>% 
+    st_set_crs(32616)
+
+belice <- read_sf("mapa_base_belice.json") %>% 
+    st_set_crs(32616)
+
+guatemala_lagos <- read_sf("hidrografia_lagos.json") %>% 
+    st_set_crs(32616)
+    
+
+# 2️⃣ Graficar la inflación por región
+ # Crear el mapa
+    ggplot(mapa_completo) +
+        geom_sf(aes(fill = inflacion), color = "black", size = 0.3) +
+        geom_sf(data = guatemala_lagos,
+                fill = "skyblue", color = "gray50", size = 0.15, alpha = 0.5) +
+        geom_sf(data = belice,
+                fill = NA, color = "gray50", size = 0.15, alpha = 0.5) +
+        geom_text(data = centroides, 
+                  aes(x = X, y = Y, 
+                      label = paste0(
+                          case_when(
+                              nom_reg == "METROPOLITANA -I-" ~ "I",
+                              nom_reg == "NORTE -II-" ~ "II",
+                              nom_reg == "NORORIENTE -III-" ~ "III",
+                              nom_reg == "SURORIENTE -IV-" ~ "IV",
+                              nom_reg == "CENTRAL -V-" ~ "V",
+                              nom_reg == "SUROCCIDENTE -VI-" ~ "VI",
+                              nom_reg == "NOROCCIDENTE -VII-" ~ "VII",
+                              nom_reg == "PETÉN -VIII-" ~ "VIII"
+                          ), 
+```
+
+---
+
+# ✅Muchas gracias  {.center}
+
+

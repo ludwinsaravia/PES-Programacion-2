@@ -7,9 +7,6 @@
 # 2025
 #
 # Probado usando Julia 1.12.0
-#
-# En VS Code, puedes ejecutar cada sección usando Ctrl+Enter
-# o ejecutar celdas completas con Alt+Enter
 
 
 ################################################################################
