@@ -1,0 +1,325 @@
+Anio,Mes,Region,IPC
+2021,Enero,Rep,148.87
+2021,Enero,Reg I,126.48
+2021,Enero,Reg II,220.08
+2021,Enero,Reg III,138.83
+2021,Enero,Reg IV,207.5
+2021,Enero,Reg V,137.92
+2021,Enero,Reg VI,136.55
+2021,Enero,Reg VII,197.69
+2021,Enero,Reg VIII,153.57
+2021,Febrero,Rep,149.34
+2021,Febrero,Reg I,127.04
+2021,Febrero,Reg II,219.44
+2021,Febrero,Reg III,139.03
+2021,Febrero,Reg IV,208.42
+2021,Febrero,Reg V,138.55
+2021,Febrero,Reg VI,135.62
+2021,Febrero,Reg VII,201.11
+2021,Febrero,Reg VIII,153.55
+2021,Marzo,Rep,149.84
+2021,Marzo,Reg I,127.54
+2021,Marzo,Reg II,219.21
+2021,Marzo,Reg III,139.43
+2021,Marzo,Reg IV,209.08
+2021,Marzo,Reg V,139.49
+2021,Marzo,Reg VI,136.18
+2021,Marzo,Reg VII,201.49
+2021,Marzo,Reg VIII,153.77
+2021,Abril,Rep,150
+2021,Abril,Reg I,127.63
+2021,Abril,Reg II,219.3
+2021,Abril,Reg III,140.31
+2021,Abril,Reg IV,209.99
+2021,Abril,Reg V,139.77
+2021,Abril,Reg VI,136.43
+2021,Abril,Reg VII,200.62
+2021,Abril,Reg VIII,153.76
+2021,Mayo,Rep,150.24
+2021,Mayo,Reg I,128.11
+2021,Mayo,Reg II,218.17
+2021,Mayo,Reg III,140.72
+2021,Mayo,Reg IV,210.64
+2021,Mayo,Reg V,139.96
+2021,Mayo,Reg VI,136.45
+2021,Mayo,Reg VII,200.59
+2021,Mayo,Reg VIII,154.52
+2021,Junio,Rep,150.52
+2021,Junio,Reg I,128.14
+2021,Junio,Reg II,218.02
+2021,Junio,Reg III,140.95
+2021,Junio,Reg IV,211.01
+2021,Junio,Reg V,140.22
+2021,Junio,Reg VI,136.9
+2021,Junio,Reg VII,201.8
+2021,Junio,Reg VIII,154.7
+2021,Julio,Rep,151.02
+2021,Julio,Reg I,128.5
+2021,Julio,Reg II,219.02
+2021,Julio,Reg III,141.28
+2021,Julio,Reg IV,211.36
+2021,Julio,Reg V,141.06
+2021,Julio,Reg VI,137.37
+2021,Julio,Reg VII,202.48
+2021,Julio,Reg VIII,155.03
+2021,Agosto,Rep,151.33
+2021,Agosto,Reg I,128.63
+2021,Agosto,Reg II,219.95
+2021,Agosto,Reg III,141.31
+2021,Agosto,Reg IV,211.24
+2021,Agosto,Reg V,141.32
+2021,Agosto,Reg VI,137.61
+2021,Agosto,Reg VII,203.5
+2021,Agosto,Reg VIII,156.14
+2021,Septiembre,Rep,151.65
+2021,Septiembre,Reg I,128.84
+2021,Septiembre,Reg II,220.98
+2021,Septiembre,Reg III,141.39
+2021,Septiembre,Reg IV,211.28
+2021,Septiembre,Reg V,141.75
+2021,Septiembre,Reg VI,137.96
+2021,Septiembre,Reg VII,203.99
+2021,Septiembre,Reg VIII,156.64
+2021,Octubre,Rep,152.2
+2021,Octubre,Reg I,129.49
+2021,Octubre,Reg II,221.22
+2021,Octubre,Reg III,142.1
+2021,Octubre,Reg IV,211.55
+2021,Octubre,Reg V,142.25
+2021,Octubre,Reg VI,138.59
+2021,Octubre,Reg VII,204.4
+2021,Octubre,Reg VIII,156.89
+2021,Noviembre,Rep,152.94
+2021,Noviembre,Reg I,129.99
+2021,Noviembre,Reg II,222.16
+2021,Noviembre,Reg III,143.02
+2021,Noviembre,Reg IV,212.13
+2021,Noviembre,Reg V,143.16
+2021,Noviembre,Reg VI,139.36
+2021,Noviembre,Reg VII,205.56
+2021,Noviembre,Reg VIII,157.81
+2021,Diciembre,Rep,153.2
+2021,Diciembre,Reg I,130.08
+2021,Diciembre,Reg II,221.51
+2021,Diciembre,Reg III,143.98
+2021,Diciembre,Reg IV,212.73
+2021,Diciembre,Reg V,143.54
+2021,Diciembre,Reg VI,140.07
+2021,Diciembre,Reg VII,205.74
+2021,Diciembre,Reg VIII,157.01
+2022,Enero,Rep,153.14
+2022,Enero,Reg I,130.36
+2022,Enero,Reg II,223.78
+2022,Enero,Reg III,144.49
+2022,Enero,Reg IV,212.98
+2022,Enero,Reg V,141.1
+2022,Enero,Reg VI,139.86
+2022,Enero,Reg VII,205.68
+2022,Enero,Reg VIII,156.42
+2022,Febrero,Rep,153.79
+2022,Febrero,Reg I,131.14
+2022,Febrero,Reg II,225.34
+2022,Febrero,Reg III,145.29
+2022,Febrero,Reg IV,214.11
+2022,Febrero,Reg V,141.06
+2022,Febrero,Reg VI,139.99
+2022,Febrero,Reg VII,206.62
+2022,Febrero,Reg VIII,156.92
+2022,Marzo,Rep,156.09
+2022,Marzo,Reg I,133.13
+2022,Marzo,Reg II,227.69
+2022,Marzo,Reg III,148.36
+2022,Marzo,Reg IV,217.01
+2022,Marzo,Reg V,143.74
+2022,Marzo,Reg VI,141.93
+2022,Marzo,Reg VII,209.72
+2022,Marzo,Reg VIII,158.34
+2022,Abril,Rep,156.93
+2022,Abril,Reg I,134.01
+2022,Abril,Reg II,229.18
+2022,Abril,Reg III,149.36
+2022,Abril,Reg IV,217.45
+2022,Abril,Reg V,144.43
+2022,Abril,Reg VI,142.74
+2022,Abril,Reg VII,210.09
+2022,Abril,Reg VIII,160.11
+2022,Mayo,Rep,158.98
+2022,Mayo,Reg I,135.93
+2022,Mayo,Reg II,230.4
+2022,Mayo,Reg III,151.31
+2022,Mayo,Reg IV,218.93
+2022,Mayo,Reg V,147.17
+2022,Mayo,Reg VI,145.27
+2022,Mayo,Reg VII,211.97
+2022,Mayo,Reg VIII,161.86
+2022,Junio,Rep,161.89
+2022,Junio,Reg I,136.68
+2022,Junio,Reg II,239.08
+2022,Junio,Reg III,153.02
+2022,Junio,Reg IV,226.94
+2022,Junio,Reg V,148.61
+2022,Junio,Reg VI,147.77
+2022,Junio,Reg VII,220.36
+2022,Junio,Reg VIII,163.81
+2022,Julio,Rep,163.64
+2022,Julio,Reg I,137.13
+2022,Julio,Reg II,245.7
+2022,Julio,Reg III,154.63
+2022,Julio,Reg IV,227.57
+2022,Julio,Reg V,150.37
+2022,Julio,Reg VI,149.27
+2022,Julio,Reg VII,225.71
+2022,Julio,Reg VIII,165.69
+2022,Agosto,Rep,164.76
+2022,Agosto,Reg I,137.96
+2022,Agosto,Reg II,249.4
+2022,Agosto,Reg III,155.34
+2022,Agosto,Reg IV,228.73
+2022,Agosto,Reg V,151.26
+2022,Agosto,Reg VI,150.8
+2022,Agosto,Reg VII,225.93
+2022,Agosto,Reg VIII,167.41
+2022,Septiembre,Rep,165.35
+2022,Septiembre,Reg I,139.06
+2022,Septiembre,Reg II,249.05
+2022,Septiembre,Reg III,155.98
+2022,Septiembre,Reg IV,229.96
+2022,Septiembre,Reg V,152.18
+2022,Septiembre,Reg VI,150.48
+2022,Septiembre,Reg VII,225.54
+2022,Septiembre,Reg VIII,169.12
+2022,Octubre,Rep,166.97
+2022,Octubre,Reg I,140.63
+2022,Octubre,Reg II,250.41
+2022,Octubre,Reg III,157.69
+2022,Octubre,Reg IV,233.71
+2022,Octubre,Reg V,153.58
+2022,Octubre,Reg VI,151.47
+2022,Octubre,Reg VII,227.54
+2022,Octubre,Reg VIII,170.62
+2022,Noviembre,Rep,166.96
+2022,Noviembre,Reg I,141.15
+2022,Noviembre,Reg II,248.03
+2022,Noviembre,Reg III,157.66
+2022,Noviembre,Reg IV,234.16
+2022,Noviembre,Reg V,153.8
+2022,Noviembre,Reg VI,152.16
+2022,Noviembre,Reg VII,225.05
+2022,Noviembre,Reg VIII,170.3
+2022,Diciembre,Rep,167.35
+2022,Diciembre,Reg I,141.48
+2022,Diciembre,Reg II,247.87
+2022,Diciembre,Reg III,158.65
+2022,Diciembre,Reg IV,235.01
+2022,Diciembre,Reg V,154.16
+2022,Diciembre,Reg VI,152.78
+2022,Diciembre,Reg VII,224.7
+2022,Diciembre,Reg VIII,170.72
+2023,Enero,Rep,167.98
+2023,Enero,Reg I,141.5
+2023,Enero,Reg II,251.13
+2023,Enero,Reg III,158.84
+2023,Enero,Reg IV,234.63
+2023,Enero,Reg V,154.39
+2023,Enero,Reg VI,153.8
+2023,Enero,Reg VII,227.34
+2023,Enero,Reg VIII,170.44
+2023,Febrero,Rep,169.05
+2023,Febrero,Reg I,140.94
+2023,Febrero,Reg II,257.22
+2023,Febrero,Reg III,158.73
+2023,Febrero,Reg IV,236.03
+2023,Febrero,Reg V,154.91
+2023,Febrero,Reg VI,154.9
+2023,Febrero,Reg VII,232.92
+2023,Febrero,Reg VIII,172
+2023,Marzo,Rep,169.69
+2023,Marzo,Reg I,140.95
+2023,Marzo,Reg II,259.3
+2023,Marzo,Reg III,159.78
+2023,Marzo,Reg IV,237.7
+2023,Marzo,Reg V,155.45
+2023,Marzo,Reg VI,155.55
+2023,Marzo,Reg VII,234.5
+2023,Marzo,Reg VIII,172.06
+2023,Abril,Rep,169.98
+2023,Abril,Reg I,141.87
+2023,Abril,Reg II,257.6
+2023,Abril,Reg III,160.22
+2023,Abril,Reg IV,236.98
+2023,Abril,Reg V,155.76
+2023,Abril,Reg VI,155.56
+2023,Abril,Reg VII,234.72
+2023,Abril,Reg VIII,172.18
+2023,Mayo,Rep,169.37
+2023,Mayo,Reg I,141.06
+2023,Mayo,Reg II,254.8
+2023,Mayo,Reg III,160.16
+2023,Mayo,Reg IV,237.93
+2023,Mayo,Reg V,155.24
+2023,Mayo,Reg VI,154.98
+2023,Mayo,Reg VII,234.15
+2023,Mayo,Reg VIII,172.32
+2023,Junio,Rep,169.87
+2023,Junio,Reg I,140.99
+2023,Junio,Reg II,257.91
+2023,Junio,Reg III,159.97
+2023,Junio,Reg IV,240.12
+2023,Junio,Reg V,155.01
+2023,Junio,Reg VI,155.42
+2023,Junio,Reg VII,235.72
+2023,Junio,Reg VIII,172.82
+2023,Julio,Rep,171.06
+2023,Julio,Reg I,141.53
+2023,Julio,Reg II,264.64
+2023,Julio,Reg III,161.34
+2023,Julio,Reg IV,242.17
+2023,Julio,Reg V,155.48
+2023,Julio,Reg VI,155.8
+2023,Julio,Reg VII,238.29
+2023,Julio,Reg VIII,173.3
+2023,Agosto,Rep,172.13
+2023,Agosto,Reg I,142
+2023,Agosto,Reg II,266.53
+2023,Agosto,Reg III,162.08
+2023,Agosto,Reg IV,243.79
+2023,Agosto,Reg V,156.64
+2023,Agosto,Reg VI,157.35
+2023,Agosto,Reg VII,239.98
+2023,Agosto,Reg VIII,174.66
+2023,Septiembre,Rep,173.1
+2023,Septiembre,Reg I,142.38
+2023,Septiembre,Reg II,265.1
+2023,Septiembre,Reg III,162.84
+2023,Septiembre,Reg IV,243.94
+2023,Septiembre,Reg V,158.38
+2023,Septiembre,Reg VI,159.52
+2023,Septiembre,Reg VII,241.05
+2023,Septiembre,Reg VIII,177.84
+2023,Octubre,Rep,175.29
+2023,Octubre,Reg I,143.28
+2023,Octubre,Reg II,265.14
+2023,Octubre,Reg III,164.58
+2023,Octubre,Reg IV,246.65
+2023,Octubre,Reg V,160.36
+2023,Octubre,Reg VI,162.22
+2023,Octubre,Reg VII,248.21
+2023,Octubre,Reg VIII,181.38
+2023,Noviembre,Rep,174.14
+2023,Noviembre,Reg I,143.45
+2023,Noviembre,Reg II,263.61
+2023,Noviembre,Reg III,162.45
+2023,Noviembre,Reg IV,246.17
+2023,Noviembre,Reg V,159.31
+2023,Noviembre,Reg VI,160.7
+2023,Noviembre,Reg VII,243.57
+2023,Noviembre,Reg VIII,179.04
+2023,Diciembre,Rep,174.34
+2023,Diciembre,Reg I,143.7
+2023,Diciembre,Reg II,267.15
+2023,Diciembre,Reg III,162.35
+2023,Diciembre,Reg IV,247.01
+2023,Diciembre,Reg V,159.41
+2023,Diciembre,Reg VI,161.12
+2023,Diciembre,Reg VII,241.25
+2023,Diciembre,Reg VIII,179
