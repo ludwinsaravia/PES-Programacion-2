@@ -1,0 +1,10 @@
+---
+title: "Prueba full-bleed"
+format:
+  revealjs:
+    theme: white     
+---
+
+# Hola
+
+[![Elephant](elephant.png)](https://en.wikipedia.org/wiki/Elephant)
