@@ -1,0 +1,381 @@
+---
+title: "Shiny: Dashboards Interactivos con R"
+subtitle: "Panorama Macroeconómico de Guatemala"
+author: "Kevin Molina, Rita Pérez, Pedro Monzón, Ludwin Saravia"
+format: 
+  revealjs:
+    theme: blood
+    slide-number: true
+    transition: slide
+    background-transition: fade
+    center: true
+    width: "100%"
+    height: "100%"
+    margin: 0.1
+    minScale: 0.5
+    maxScale: 2.0
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #dee2e6 100%)
+    footer: "Shiny: Dashboards Interactivos con R"
+---
+
+## Demostración
+
+---
+
+## ¿Qué es Shiny?
+
+Shiny es un paquete de R que permite crear aplicaciones web interactivas directamente desde R.
+
+### Características principales:
+- Sin necesidad de HTML/CSS/JavaScript
+- Reactividad automática
+- Framework web completo
+- Open source y gratuito
+
+---
+
+## Arquitectura de Shiny
+
+Toda aplicación Shiny tiene **tres componentes principales**:
+
+### 1. Interfaz de Usuario (UI)
+- Define la apariencia y layout
+- Controles de entrada (inputs)
+- Elementos de salida (outputs)
+
+### 2. Servidor (Server)
+- Contiene la lógica de la aplicación
+- Código R que responde a inputs
+- Genera outputs dinámicos
+
+---
+
+### 3. Función shinyApp()
+- Conecta la UI con el Server
+- Ejecuta la aplicación
+- Maneja el ciclo de vida de la app
+
+---
+
+## Estructura Básica de una App Shiny
+
+```r
+library(shiny)
+
+# Define UI
+ui <- page_fluid(
+  # Contenido de la interfaz
+)
+
+# Define server logic
+server <- function(input, output) {
+  # Lógica del servidor
+}
+
+# Run the application
+shinyApp(ui = ui, server = server)
+```
+
+---
+
+## Contenedores
+
+Shiny organiza la interfaz en diferentes niveles de contenedores:
+
+### fluidPage - Contenedor principal
+```r
+ui <- page_fluid(
+  # Todo el contenido de la app va aquí
+)
+```
+
+### Layouts - Estructura general
+```r
+layout_sidebar()    # Layout con sidebar
+tabsetPanel()      # Layout con pestañas
+navbarPage()       # Layout con navbar
+```
+
+---
+
+## Layouts Predefinidos
+
+Shiny ofrece varios layouts para organizar la interfaz (el lienzo del dashboard):
+
+
+```r
+ui <- page_fluid(
+  layout_sidebar(
+    sidebar = sidebar("Controles aquí"),
+  )
+)
+```
+
+
+---
+
+## Lógica del Servidor (Server)
+
+El servidor contiene toda la lógica de la aplicación, conecta inputs con outputs:
+
+```r
+server <- function(input, output) {
+  
+  # Filtros a través de widgets
+    tot_annual_range <- reactive({
+        req(tot_annual, year_range())
+        filter(tot_annual, anio >= year_range()[1], anio <= year_range()[2])
+    })
+  
+  # Output: value box de exportaciones
+    output$vb_export <- renderText({
+        d <- tot_annual_range()
+        req(nrow(d) > 0)
+        ult <- max(d$anio, na.rm = TRUE)
+        val <- d$Exportaciones[d$anio == ult]
+        paste0(number(val, big.mark = ",", accuracy = 0.1), " millones USD")
+    })
+}
+```
+
+---
+
+### Parámetros del server:
+- `input`: Objeto que contiene todos los valores de los inputs
+- `output`: Objeto donde se asignan los outputs
+
+---
+
+## Inputs:
+
+Los inputs permiten a los usuarios interactuar con la aplicación:
+
+```r
+ui <- page_fluid(
+  # Diferentes tipos de inputs
+        sidebar = sidebar(
+            card(full_screen = TRUE,         
+                card_header("Rango de años"),            
+                sliderInput("slider_years", label = "", 
+                            min = 2015, max = 2024, value = c(2015, 2024))),
+            
+            card(full_screen = TRUE,         
+                card_header("Socios y productos"),            
+                radioButtons(
+                            inputId = "radio_mapas",
+                            label = h6("Elegir modo: "),
+                            choices = c("Exportaciones", "Importaciones"),
+                            selected = NULL),
+                
+                sliderInput("slider_mapas", label = h6("Elegir año: "), 
+                            min = 2015, max = 2024, value = 2015),
+
+                selectizeInput(
+                    inputId = "tops",
+                    label = h6("Cantidad elementos en top"),
+                    choices  = list("Top 3" = 3, "Top 5" = 5, "Top 10" = 10),
+                    options = list(dropdownParent = "body"))),
+            
+        position = "left"),
+```
+
+---
+
+## Outputs:
+
+Los outputs muestran los resultados de los cálculos:
+
+```r
+ui <- fluidPage(
+  # Diferentes tipos de outputs
+value_box(title = textOutput("vb_saldo_title"),
+          value = textOutput("vb_saldo"),
+          showcase = bs_icon("currency-dollar"),
+          theme = "warning"),
+)
+```
+
+---
+
+## Reactividad en Shiny
+
+La reactividad es el concepto más importante en Shiny:
+
+```r
+server <- function(input, output) {
+  
+  # Expresión reactiva
+    map_year <- reactive({
+        req(input$slider_mapas)
+        input$slider_mapas
+    })
+    
+    map_var <- reactive({
+        req(input$radio_mapas)
+        input$radio_mapas
+    })
+  })
+}
+```
+
+---
+
+### Render functions correspondientes:
+```r
+renderPlot()        # → plotOutput
+renderTable()       # → tableOutput  
+renderText()        # → textOutput
+```
+
+---
+
+## Función shinyApp()
+
+La función shinyApp() conecta todo y ejecuta la aplicación:
+
+```r
+# 1. Definir UI
+ui <- page_fluid(
+
+)
+
+# 2. Definir Server
+server <- function(input, output) {
+
+}
+
+# 3. Ejecutar aplicación
+shinyApp(ui = ui, server = server)
+```
+
+---
+
+### Características de shinyApp():
+- Conecta UI con Server
+- Maneja el ciclo de vida de la app
+- Inicia el servidor web
+- Gestiona sesiones de usuario
+
+---
+
+## Ventajas de Shiny
+
+### Para Desarrolladores R
+- Integración total con R
+- Amplia documentación
+- Comunidad activa
+
+### Para Usuarios Finales
+- Interfaz web moderna
+- Actualizaciones en tiempo real
+
+---
+
+## Mejores Prácticas de Estructura
+
+- Código modular con funciones
+- Separación clara UI/server
+
+```r
+source("clean_data_anual.R")
+source("Plot_Map.R")
+source("analysis_pro.R")
+source("Funciones.R")
+```
+
+---
+
+##  Bootstrap
+
+Set de herramientas para crear aplicaciones web 
+```r
+theme = bs_theme(
+        version  =5, 
+        bootswatch = "sandstone",
+        base_font = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+        heading_font = "Roboto, 'Segoe UI', Helvetica, Arial, sans-serif",
+        primary = "#0C2C47", #Navy
+        secondary = "#2D5E5E", # Green
+        success = "#1E4859",   # Azul petróleo
+        warning = "#E2A340",   # Yellow
+        info = "#E7EAEA",      # Mint
+        light = "#f8f9fa",     # gris claro
+        dark = "#0C2C47"       # Navy
+        
+    ) |> bs_add_rules("
+        body {
+        font-size: 18px;
+        }
+        h2 { 
+            background-color: var(--bs-primary); 
+            color:white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            line-height: 1.3;
+            text-align: center}
+        h4 { 
+            background-color: var(--bs-light);
+            color: var(--bs-primary);
+            padding: 6px 12px;
+            line-height: 1.3;
+            font-weight: 700;
+            text-align: left}
+
+        .card { background-color: var(--bs-light); }
+        .card-header { 
+                    padding: 4px 8px;
+                    background-color: var(--bs-primary);
+                    color:white;
+                    text-align: center}
+        .btn-primary { background-color:var(--bs-warning); border-color: var(--bs-warning); }
+        .nav-tabs .nav-link.active { background-color: var(--bs-info); color: var(--bs-primary)}
+        .bslib-value-box .bslib-value-box-value{font-size:4rem;font-weight:800;line-height:1.1; text-align: left;}
+        .bslib-value-box .value-box-title { font-size: 1.5rem !important;}
+        .bslib-value-box .bslib-value-box-showcase{opacity:.25;font-size:84px; align-items: start !important;}
+        .bslib-value-box{border-radius:14px}        
+    ")
+```
+
+---
+
+## Librerías
+```r
+library(shiny)
+library(bslib) #personalización aspecto visual usando framework Bootstrap
+library(bsicons) #iconos de Bootstrap
+library(tidyverse)
+library(systemfonts)
+library(scales) #de Tidyverse, formatea valores numéricos
+```
+
+---
+
+## Recursos Oficiales
+
+### Documentación:
+- [Shiny Basics](https://shiny.posit.co/r/getstarted/shiny-basics/lesson1/)
+- [Shiny Gallery](https://shiny.posit.co/r/gallery/)
+
+### Recursos:
+- **Temas**:
+[Bootswatch · BootstrapCDN](https://www.bootstrapcdn.com/bootswatch/)
+
+- **Jerarquía de Encabezados**:
+[Tipografía · Bootstrap 5 en Español v5.1](https://getbootstrap.esdocu.com/docs/5.1/content/typography/#encabezados)
+
+- **Widgets**:
+[Shiny - Widget Gallery](https://shiny.posit.co/r/gallery/widgets/widget-gallery/)
+
+- **Colores**:
+[Buttons · Bootstrap](https://shiny.posit.co/r/gallery/widgets/widget-gallery/)
+
+
+---
+
+## La simplicidad es la máxima sofistificación
+
+---
+
+## Espacio para comentarios
+
+
