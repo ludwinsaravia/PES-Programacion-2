@@ -5,7 +5,7 @@
 library(comtradr)
 library(tidyverse)
 
-set_primary_comtrade_key("39403d72ba4342bcaab844bc55ff0b4a")
+set_primary_comtrade_key("Ingresar Key")
 country_codes$country
 
 gtm_exports = data.frame()
